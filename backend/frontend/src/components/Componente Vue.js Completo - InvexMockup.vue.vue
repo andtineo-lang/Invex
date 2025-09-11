@@ -1,3 +1,489 @@
+<!--css-->
+<style scoped>
+/* Estilos Base */
+.mockup-container {
+  @apply max-w-6xl mx-auto p-5 min-h-screen;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.mockup-header {
+  @apply text-center text-white mb-8;
+}
+
+.mockup-header h1 {
+  @apply text-3xl font-bold mb-2;
+}
+
+/* Navegación */
+.mockup-nav {
+  @apply rounded-2xl p-5 mb-8 flex justify-center flex-wrap gap-3;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+}
+
+.nav-btn {
+  @apply text-white border-0 px-6 py-3 rounded-lg cursor-pointer font-semibold transition-all duration-300;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.nav-btn:hover,
+.nav-btn.active {
+  @apply transform -translate-y-0.5;
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* Screens Base */
+.screen {
+  @apply bg-white rounded-3xl overflow-hidden min-h-screen;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+}
+
+/* Login Screen */
+.login-screen {
+  @apply flex min-h-full;
+}
+
+.login-left {
+  @apply flex-1 p-16 text-white flex flex-col justify-center;
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+}
+
+.login-right {
+  @apply flex-1 p-16 flex flex-col justify-center;
+}
+
+.login-form {
+  @apply max-w-md mx-auto w-full;
+}
+
+.feature-list {
+  @apply mt-8 list-none;
+}
+
+.feature-list li {
+  @apply mb-3;
+}
+
+.form-group {
+  @apply mb-5;
+}
+
+.form-group label {
+  @apply block mb-2 font-semibold text-gray-800;
+}
+
+.form-group input,
+.form-group select,
+.form-select,
+.form-input {
+  @apply w-full px-4 py-3 border-2 border-gray-200 rounded-lg text-base transition-colors duration-300;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-select:focus,
+.form-input:focus {
+  @apply outline-none border-blue-400;
+}
+
+.form-divider {
+  @apply my-8;
+}
+
+/* Buttons */
+.btn-primary {
+  @apply text-white border-0 px-7 py-4 rounded-lg text-base font-semibold cursor-pointer w-full transition-transform duration-300;
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+}
+
+.btn-primary:hover {
+  @apply transform -translate-y-0.5;
+}
+
+.btn-secondary {
+  @apply bg-gray-600 text-white border-0 px-5 py-2.5 rounded-lg cursor-pointer;
+}
+
+.btn-success {
+  @apply bg-green-600 text-white border-0 px-5 py-2.5 rounded-lg cursor-pointer;
+}
+
+.btn-sm {
+  @apply px-3 py-1.5 border-0 rounded cursor-pointer text-xs;
+}
+
+.btn-edit {
+  @apply bg-blue-600 text-white;
+}
+
+.btn-delete,
+.btn-danger {
+  @apply bg-red-600 text-white;
+}
+
+.register-btn {
+  @apply mt-5;
+}
+
+/* Subscription Plans */
+.subscription-plans {
+  @apply flex gap-4 mt-3;
+}
+
+.plan {
+  @apply flex-1 p-4 border-2 border-gray-200 rounded-lg text-center cursor-pointer transition-all duration-300;
+}
+
+.plan:hover,
+.plan.selected {
+  @apply border-blue-400;
+  background: rgba(79, 172, 254, 0.1);
+}
+
+.plan h4 {
+  @apply font-semibold mb-1;
+}
+
+.plan small {
+  @apply text-xs text-gray-600;
+}
+
+/* Dashboard */
+.dashboard {
+  @apply p-8;
+}
+
+.dashboard-header {
+  @apply flex justify-between items-center mb-8 pb-5 border-b-2 border-gray-100;
+}
+
+.dashboard-stats {
+  @apply grid gap-5 mb-8;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+}
+
+.stat-card {
+  @apply text-white p-6 rounded-xl text-center transition-all duration-300;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.stat-value {
+  @apply text-4xl font-bold mb-3;
+}
+
+.dashboard-content {
+  @apply grid gap-8;
+  grid-template-columns: 2fr 1fr;
+}
+
+.chart-container {
+  @apply bg-gray-50 p-6 rounded-xl h-72 flex items-center justify-center border-2 border-dashed border-gray-300;
+}
+
+.chart-placeholder {
+  @apply text-center;
+}
+
+.alerts-panel {
+  @apply bg-yellow-50 border border-yellow-200 rounded-xl p-5;
+}
+
+.alert-item {
+  @apply bg-white p-4 rounded-lg mb-4 border-l-4;
+}
+
+.alert-item:last-child {
+  @apply mb-0;
+}
+
+.alert-item.urgent {
+  @apply border-l-red-500;
+}
+
+.alert-item.warning {
+  @apply border-l-orange-500;
+}
+
+.alert-item.success {
+  @apply border-l-green-500;
+}
+
+.calendar-widget {
+  @apply bg-gray-50 p-5 rounded-xl mt-5;
+}
+
+.calendar-grid {
+  @apply grid grid-cols-4 gap-3 mt-4;
+}
+
+.calendar-event {
+  @apply p-3 bg-blue-50 rounded text-center text-sm;
+}
+
+/* Inventory */
+.inventory-header {
+  @apply flex justify-between items-center px-8 py-5 border-b-2 border-gray-100;
+}
+
+.inventory-controls {
+  @apply flex gap-3 items-center;
+}
+
+.search-input {
+  @apply px-4 py-2.5 border-2 border-gray-200 rounded-lg w-80;
+}
+
+.inventory-table {
+  @apply w-full border-collapse mx-8 my-5;
+}
+
+.inventory-table th,
+.inventory-table td {
+  @apply px-4 py-4 text-left border-b border-gray-200;
+}
+
+.inventory-table th {
+  @apply bg-gray-50 font-semibold;
+}
+
+.stock-indicator {
+  @apply inline-block w-3 h-3 rounded-full mr-2;
+}
+
+.stock-high {
+  @apply bg-green-500;
+}
+
+.stock-medium {
+  @apply bg-yellow-500;
+}
+
+.stock-low {
+  @apply bg-red-500;
+}
+
+.action-buttons {
+  @apply flex gap-2;
+}
+
+.seasonal-tag {
+  @apply inline-block;
+}
+
+/* Projections */
+.projections-container {
+  @apply p-8;
+}
+
+.projection-chart {
+  @apply bg-gray-50 h-96 rounded-xl my-5 flex items-center justify-center border-2 border-dashed border-gray-300;
+}
+
+.recommendations {
+  @apply grid gap-5 mt-5;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+}
+
+.recommendation-card {
+  @apply p-5 rounded-xl text-white;
+  background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);
+}
+
+.recommendation-card.urgent {
+  background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+}
+
+.recommendation-card.warning {
+  background: linear-gradient(135deg, #ffa726 0%, #ffcc02 100%);
+}
+
+.ai-insights {
+  @apply bg-gray-50 p-5 rounded-xl mt-5;
+}
+
+.ai-insights ul {
+  @apply mt-4;
+}
+
+.ai-insights li {
+  @apply mb-2;
+}
+
+/* Reports */
+.reports-container {
+  @apply p-8;
+}
+
+.kpi-grid {
+  @apply grid gap-5 mb-8;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+}
+
+.kpi-card {
+  @apply text-white p-5 rounded-xl text-center;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.kpi-value {
+  @apply text-2xl my-3 font-bold;
+}
+
+.charts-section {
+  @apply bg-gray-50 p-6 rounded-xl mb-5;
+}
+
+.charts-grid {
+  @apply grid grid-cols-2 gap-5 mt-4;
+}
+
+.download-section {
+  @apply bg-gray-50 p-5 rounded-xl text-center;
+}
+
+/* Users */
+.users-container {
+  @apply p-8;
+}
+
+.users-header {
+  @apply flex justify-between items-center mb-5;
+}
+
+.user-card {
+  @apply bg-white border border-gray-200 rounded-lg p-5 mb-4 flex justify-between items-center transition-all duration-300;
+}
+
+.user-info {
+  @apply flex items-center gap-4;
+}
+
+.user-avatar {
+  @apply w-12 h-12 rounded-full flex items-center justify-center text-white font-bold;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.user-role {
+  @apply px-3 py-1 rounded-full text-xs font-semibold;
+}
+
+.role-admin {
+  @apply bg-blue-50 text-blue-700;
+}
+
+.role-worker {
+  @apply bg-purple-50 text-purple-700;
+}
+
+.user-actions {
+  @apply flex gap-2;
+}
+
+.pending-approvals {
+  @apply bg-yellow-50 border border-yellow-200 rounded-lg p-4 mt-5;
+}
+
+.approval-item {
+  @apply mt-3;
+}
+
+.approval-actions {
+  @apply mt-2;
+}
+
+/* Settings */
+.settings-container {
+  @apply p-8;
+}
+
+.settings-section {
+  @apply bg-white border border-gray-200 rounded-lg p-5 mb-5;
+}
+
+.add-date-form {
+  @apply flex gap-4 my-4 flex-wrap;
+}
+
+.flex-input {
+  @apply flex-1 min-w-48 px-3 py-2 border border-gray-300 rounded;
+}
+
+.date-input {
+  @apply px-3 py-2 border border-gray-300 rounded;
+}
+
+.impact-input {
+  @apply w-40 px-3 py-2 border border-gray-300 rounded;
+}
+
+.custom-dates {
+  @apply grid gap-4 mt-4;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+}
+
+.date-card {
+  @apply bg-gray-50 p-4 rounded-lg border border-gray-200 transition-all duration-300;
+}
+
+.date-actions {
+  @apply mt-3;
+}
+
+.prediction-settings {
+  @apply grid gap-4 mt-4;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+}
+
+.save-settings {
+  @apply text-center mt-8;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .login-screen {
+    @apply flex-col;
+  }
+  
+  .dashboard-content {
+    @apply grid-cols-1;
+  }
+  
+  .subscription-plans {
+    @apply flex-col;
+  }
+  
+  .mockup-nav {
+    @apply p-4;
+  }
+  
+  .nav-btn {
+    @apply text-sm px-4 py-2;
+  }
+
+  .charts-grid {
+    @apply grid-cols-1;
+  }
+
+  .add-date-form {
+    @apply flex-col;
+  }
+
+  .flex-input,
+  .date-input,
+  .impact-input {
+    @apply w-full;
+  }
+
+  .calendar-grid {
+    @apply grid-cols-2;
+  }
+}
+
+</style>
+
+
+
+
+
 <template>
   <div class="mockup-container">
     <!-- Header -->
