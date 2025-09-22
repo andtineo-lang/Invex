@@ -379,38 +379,19 @@ export default {
     // Reactive data
     const activeScreen = ref('login')
     const inventorySearch = ref('')
-    
-    // Login and Register Forms
-    const loginForm = ref({
-      email: '',
-      password: ''
-    })
-    
-    const registerForm = ref({
-      companyName: '',
-      email: '',
-      password: '',
-      selectedPlan: 'monthly'
-    })
 
-    // Current User
-    const currentUser = ref({
-      role: 'Administrador'
-    })
+    // Formularios
+    const loginForm = ref({ email: '', password: '' })
+    const registerForm = ref({ companyName: '', email: '', password: '', selectedPlan: 'monthly' })
 
-    // Settings
-    const predictionSettings = ref({
-      horizon: '1month',
-      safetyStock: 20
-    })
+    // Usuario actual
+    const currentUser = ref({ role: 'Administrador' })
 
-    const newEvent = ref({
-      name: '',
-      date: '',
-      impact: ''
-    })
+    // Configuración
+    const predictionSettings = ref({ horizon: '1month', safetyStock: 20 })
+    const newEvent = ref({ name: '', date: '', impact: '' })
 
-    // Static Data
+    // Datos estáticos
     const screens = ref([
       { id: 'login', label: 'Login/Registro' },
       { id: 'dashboard', label: 'Dashboard' },
@@ -435,34 +416,10 @@ export default {
     ])
 
     const alerts = ref([
-      {
-        id: 1,
-        type: 'urgent',
-        title: 'Alerta de San Valentín',
-        message: 'Quedan 15 días - Aumento esperado de ventas +30%',
-        detail: 'Revisar inventario de regalos románticos'
-      },
-      {
-        id: 2,
-        type: 'warning',
-        title: 'Preparación Halloween',
-        message: '3 semanas hasta Halloween',
-        detail: 'Revisar stock de disfraces y decoraciones'
-      },
-      {
-        id: 3,
-        type: '',
-        title: 'Riesgo de Stock',
-        message: '12 productos debajo del umbral mínimo',
-        detail: 'Reabastecimiento inmediato requerido'
-      },
-      {
-        id: 4,
-        type: 'success',
-        title: 'Compra Aprobada',
-        message: 'Orden #PO-2024-156 confirmada',
-        detail: 'Entrega esperada en 5 días'
-      }
+      { id: 1, type: 'urgent', title: 'Alerta de San Valentín', message: 'Quedan 15 días - Aumento esperado de ventas +30%', detail: 'Revisar inventario de regalos románticos' },
+      { id: 2, type: 'warning', title: 'Preparación Halloween', message: '3 semanas hasta Halloween', detail: 'Revisar stock de disfraces y decoraciones' },
+      { id: 3, type: '', title: 'Riesgo de Stock', message: '12 productos debajo del umbral mínimo', detail: 'Reabastecimiento inmediato requerido' },
+      { id: 4, type: 'success', title: 'Compra Aprobada', message: 'Orden #PO-2024-156 confirmada', detail: 'Entrega esperada en 5 días' }
     ])
 
     const commercialEvents = ref([
@@ -474,107 +431,39 @@ export default {
 
     const products = ref([
       {
-        id: 1,
-        name: 'Ramo de Rosas Rojas',
-        sku: 'RRB-001',
-        currentStock: 45,
-        inTransit: 200,
-        projectedSales: 350,
-        seasonalCategory: '❤️ San Valentín Alta',
-        stockLevel: 'stock-low',
+        id: 1, name: 'Ramo de Rosas Rojas', sku: 'RRB-001',
+        currentStock: 45, inTransit: 200, projectedSales: 350,
+        seasonalCategory: '❤️ San Valentín Alta', stockLevel: 'stock-low',
         stockColor: '#dc3545',
-        seasonalStyle: {
-          background: '#ffebee',
-          color: '#c62828',
-          padding: '4px 8px',
-          borderRadius: '12px',
-          fontSize: '12px'
-        }
+        seasonalStyle: { background: '#ffebee', color: '#c62828', padding: '4px 8px', borderRadius: '12px', fontSize: '12px' }
       },
       {
-        id: 2,
-        name: 'Disfraz Halloween - Bruja',
-        sku: 'HCW-002',
-        currentStock: 150,
-        inTransit: 0,
-        projectedSales: 80,
-        seasonalCategory: '🎃 Halloween',
-        stockLevel: 'stock-medium',
+        id: 2, name: 'Disfraz Halloween - Bruja', sku: 'HCW-002',
+        currentStock: 150, inTransit: 0, projectedSales: 80,
+        seasonalCategory: '🎃 Halloween', stockLevel: 'stock-medium',
         stockColor: '#ffc107',
-        seasonalStyle: {
-          background: '#fff3e0',
-          color: '#e65100',
-          padding: '4px 8px',
-          borderRadius: '12px',
-          fontSize: '12px'
-        }
+        seasonalStyle: { background: '#fff3e0', color: '#e65100', padding: '4px 8px', borderRadius: '12px', fontSize: '12px' }
       },
       {
-        id: 3,
-        name: 'Luces Árbol Navidad',
-        sku: 'CTL-003',
-        currentStock: 850,
-        inTransit: 300,
-        projectedSales: 120,
-        seasonalCategory: '🎄 Temporada Navideña',
-        stockLevel: 'stock-high',
+        id: 3, name: 'Luces Árbol Navidad', sku: 'CTL-003',
+        currentStock: 850, inTransit: 300, projectedSales: 120,
+        seasonalCategory: '🎄 Temporada Navideña', stockLevel: 'stock-high',
         stockColor: '#28a745',
-        seasonalStyle: {
-          background: '#e8f5e8',
-          color: '#2e7d32',
-          padding: '4px 8px',
-          borderRadius: '12px',
-          fontSize: '12px'
-        }
+        seasonalStyle: { background: '#e8f5e8', color: '#2e7d32', padding: '4px 8px', borderRadius: '12px', fontSize: '12px' }
       },
       {
-        id: 4,
-        name: 'Electrónicos Black Friday',
-        sku: 'BFE-004',
-        currentStock: 200,
-        inTransit: 500,
-        projectedSales: 450,
-        seasonalCategory: '⚡ Black Friday',
-        stockLevel: 'stock-medium',
+        id: 4, name: 'Electrónicos Black Friday', sku: 'BFE-004',
+        currentStock: 200, inTransit: 500, projectedSales: 450,
+        seasonalCategory: '⚡ Black Friday', stockLevel: 'stock-medium',
         stockColor: '#ffc107',
-        seasonalStyle: {
-          background: '#f3e5f5',
-          color: '#6a1b9a',
-          padding: '4px 8px',
-          borderRadius: '12px',
-          fontSize: '12px'
-        }
+        seasonalStyle: { background: '#f3e5f5', color: '#6a1b9a', padding: '4px 8px', borderRadius: '12px', fontSize: '12px' }
       }
     ])
 
     const recommendations = ref([
-      {
-        id: 1,
-        type: 'urgent',
-        icon: '🚨',
-        title: 'Acción Urgente Requerida',
-        action: 'Comprar en 5 días',
-        description: 'El inventario de Ramos de Rosas Rojas se agotará antes de la temporada de San Valentín',
-        suggestion: 'Orden recomendada: 500 unidades'
-      },
-      {
-        id: 2,
-        type: 'warning',
-        icon: '⚠️',
-        title: 'Alerta de Riesgo de Stock',
-        action: 'Riesgo de agotarse en 2 semanas',
-        description: 'Los disfraces de Halloween muestran señales de alta demanda',
-        suggestion: 'Orden recomendada: 200 unidades'
-      },
-      {
-        id: 3,
-        type: '',
-        icon: '💡',
-        title: 'Oportunidad de Optimización',
-        action: 'Reducir sobrestock',
-        description: 'Las decoraciones navideñas tienen exceso de inventario',
-        suggestion: 'Considerar precios promocionales'
-      }
+      { id: 1, type: 'urgent', icon: '🚨', title: 'Acción Urgente Requerida', action: 'Comprar en 5 días', description: 'El inventario de Ramos de Rosas Rojas se agotará antes de la temporada de San Valentín', suggestion: 'Orden recomendada: 500 unidades' },
+      { id: 2, type: 'warning', icon: '⚠️', title: 'Alerta de Riesgo de Stock', action: 'Riesgo de agotarse en 2 semanas', description: 'Los disfraces de Halloween muestran señales de alta demanda', suggestion: 'Orden recomendada: 200 unidades' },
+      { id: 3, type: '', icon: '💡', title: 'Oportunidad de Optimización', action: 'Reducir sobrestock', description: 'Las decoraciones navideñas tienen exceso de inventario', suggestion: 'Considerar precios promocionales' }
     ])
 
     const aiInsights = ref([
@@ -591,208 +480,86 @@ export default {
     ])
 
     const users = ref([
-      {
-        id: 1,
-        name: 'Juan Pérez',
-        email: 'juan.perez@empresa.com',
-        role: 'Administrador',
-        initials: 'JD',
-        roleClass: 'role-admin'
-      },
-      {
-        id: 2,
-        name: 'María Silva',
-        email: 'maria.silva@empresa.com',
-        role: 'Trabajador de Almacén',
-        initials: 'MS',
-        roleClass: 'role-worker'
-      },
-      {
-        id: 3,
-        name: 'Roberto García',
-        email: 'roberto.garcia@empresa.com',
-        role: 'Encargado de Inventario',
-        initials: 'RG',
-        roleClass: 'role-worker'
-      }
+      { id: 1, name: 'Juan Pérez', email: 'juan.perez@empresa.com', role: 'Administrador', initials: 'JD', roleClass: 'role-admin' },
+      { id: 2, name: 'María Silva', email: 'maria.silva@empresa.com', role: 'Trabajador de Almacén', initials: 'MS', roleClass: 'role-worker' },
+      { id: 3, name: 'Roberto García', email: 'roberto.garcia@empresa.com', role: 'Encargado de Inventario', initials: 'RG', roleClass: 'role-worker' }
     ])
 
     const pendingApprovals = ref([
-      {
-        id: 1,
-        type: 'Solicitud de Descuento',
-        description: 'María Silva solicitó aprobación para aplicar 25% descuento en disfraces de Halloween'
-      }
+      { id: 1, type: 'Solicitud de Descuento', description: 'María Silva solicitó aprobación para aplicar 25% descuento en disfraces de Halloween' }
     ])
 
     const customEvents = ref([
-      {
-        id: 1,
-        name: 'Aniversario de la Empresa',
-        date: '15 de Marzo, 2024',
-        impact: 25,
-        category: 'Regalos corporativos, artículos de celebración',
-        icon: '🎂'
-      },
-      {
-        id: 2,
-        name: 'Regreso a Clases',
-        date: '20 de Agosto, 2024',
-        impact: 40,
-        category: 'Útiles escolares, mochilas',
-        icon: '🎒'
-      },
-      {
-        id: 3,
-        name: 'Temporada de Festivales',
-        date: '1-30 de Junio, 2024',
-        impact: 60,
-        category: 'Equipos de festival, accesorios',
-        icon: '🎵'
-      }
+      { id: 1, name: 'Aniversario de la Empresa', date: '15 de Marzo, 2024', impact: 25, category: 'Regalos corporativos, artículos de celebración', icon: '🎂' },
+      { id: 2, name: 'Regreso a Clases', date: '20 de Agosto, 2024', impact: 40, category: 'Útiles escolares, mochilas', icon: '🎒' },
+      { id: 3, name: 'Temporada de Festivales', date: '1-30 de Junio, 2024', impact: 60, category: 'Equipos de festival, accesorios', icon: '🎵' }
     ])
 
-    // Computed properties
+    // Computed
     const filteredProducts = computed(() => {
       if (!inventorySearch.value) return products.value
-      return products.value.filter(product => 
+      return products.value.filter(product =>
         product.name.toLowerCase().includes(inventorySearch.value.toLowerCase()) ||
         product.sku.toLowerCase().includes(inventorySearch.value.toLowerCase())
       )
     })
 
-    // Methods
-    const setActiveScreen = (screenId) => {
-      activeScreen.value = screenId
-    }
+    // Métodos principales
+    const setActiveScreen = (screenId) => { activeScreen.value = screenId }
+    const handleLogin = () => { setActiveScreen('dashboard') }
+    const handleRegister = () => { setActiveScreen('dashboard') }
+    const saveSettings = () => { console.log('Save settings:', predictionSettings.value) }
 
-    const handleLogin = () => {
-      console.log('Login attempt:', loginForm.value)
-      // Implement login logic here
-      setActiveScreen('dashboard')
-    }
-
-    const handleRegister = () => {
-      console.log('Register attempt:', registerForm.value)
-      // Implement registration logic here
-      setActiveScreen('dashboard')
-    }
-
-    const showAddProduct = () => {
-      console.log('Show add product modal')
-      // Implement modal/form display logic
-    }
-
-    const editProduct = (product) => {
-      console.log('Edit product:', product)
-      // Implement edit product logic
-    }
-
-    const deleteProduct = (product) => {
-      console.log('Delete product:', product)
-      // Implement delete confirmation and logic
-    }
-
-    const showAddUser = () => {
-      console.log('Show add user modal')
-      // Implement user add modal
-    }
-
-    const editUser = (user) => {
-      console.log('Edit user:', user)
-      // Implement user editing
-    }
-
-    const viewActivity = (user) => {
-      console.log('View activity for:', user)
-      // Implement activity viewing
-    }
-
-    const approveRequest = (approval) => {
-      console.log('Approve request:', approval)
-      // Remove from pending approvals
-      const index = pendingApprovals.value.findIndex(a => a.id === approval.id)
-      if (index > -1) {
-        pendingApprovals.value.splice(index, 1)
-      }
-    }
-
-    const rejectRequest = (approval) => {
-      console.log('Reject request:', approval)
-      // Remove from pending approvals
-      const index = pendingApprovals.value.findIndex(a => a.id === approval.id)
-      if (index > -1) {
-        pendingApprovals.value.splice(index, 1)
-      }
-    }
-
-    const downloadReport = () => {
-      console.log('Download report requested')
-      // Implement PDF generation/download
-    }
-
-    const addCustomEvent = () => {
-      if (newEvent.value.name && newEvent.value.date && newEvent.value.impact) {
-        const event = {
-          id: Date.now(),
-          name: newEvent.value.name,
-          date: newEvent.value.date,
-          impact: parseInt(newEvent.value.impact),
-          category: 'Personalizado',
-          icon: '📅'
+    // Animación de alertas
+    const simulateUpdates = () => {
+      setInterval(() => {
+        const alertElements = document.querySelectorAll('.alert-item')
+        if (alertElements.length > 0) {
+          const randomAlert = alertElements[Math.floor(Math.random() * alertElements.length)]
+          randomAlert.style.transform = 'scale(1.02)'
+          setTimeout(() => {
+            randomAlert.style.transform = 'scale(1)'
+          }, 500)
         }
-        customEvents.value.push(event)
-        
-        // Reset form
-        newEvent.value = { name: '', date: '', impact: '' }
-      }
+      }, 3000)
     }
 
-    const editEvent = (event) => {
-      console.log('Edit event:', event)
-      // Implement event editing
-    }
-
-    const deleteEvent = (event) => {
-      const index = customEvents.value.findIndex(e => e.id === event.id)
-      if (index > -1) {
-        customEvents.value.splice(index, 1)
-      }
-    }
-
-    const saveSettings = () => {
-      console.log('Save settings:', predictionSettings.value)
-      // Implement settings save logic
-    }
-
-    // Lifecycle hooks
+    // Lifecycle
     onMounted(() => {
-      // Add interactive effects
-      const addHoverEffects = () => {
-        const cards = document.querySelectorAll('.stat-card, .user-card, .date-card')
-        cards.forEach(card => {
-          card.addEventListener('mouseenter', function() {
-            this.style.transform = 'translateY(-2px)'
-            this.style.boxShadow = '0 5px 15px rgba(0,0,0,0.1)'
-          })
-          
-          card.addEventListener('mouseleave', function() {
-            this.style.transform = 'translateY(0)'
-            this.style.boxShadow = ''
-          })
-        })
-      }
+      simulateUpdates()
+    })
 
-      // Simulate real-time updates
-      const simulateUpdates = () => {
-        setInterval(() => {
-          const alertElements = document.querySelectorAll('.alert-item')
-          if (alertElements.length > 0) {
-            const randomAlert = alertElements[Math.floor(Math.random() * alertElements.length)]
-            randomAlert.style.transform = 'scale(1.02)'
-            setTimeout(()
-
+    // Retornar al template
+    return {
+      activeScreen,
+      inventorySearch,
+      loginForm,
+      registerForm,
+      currentUser,
+      predictionSettings,
+      newEvent,
+      screens,
+      subscriptionPlans,
+      dashboardStats,
+      alerts,
+      commercialEvents,
+      products,
+      recommendations,
+      aiInsights,
+      kpis,
+      users,
+      pendingApprovals,
+      customEvents,
+      filteredProducts,
+      setActiveScreen,
+      handleLogin,
+      handleRegister,
+      saveSettings
+    }
+  }
+}
 </script>
+
 
 
 

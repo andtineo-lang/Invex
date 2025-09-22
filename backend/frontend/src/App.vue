@@ -11,7 +11,9 @@
           </div>
           <div class="nav-buttons">
             <button class="btn-secondary">Iniciar Sesión</button>
+             <router-link to="/registro">
             <button class="btn-primary">Crear Cuenta</button>
+            </router-link>
           </div>
         </div>
       </div>
