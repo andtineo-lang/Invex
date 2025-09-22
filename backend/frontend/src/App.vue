@@ -1,6 +1,7 @@
 
 
 <template>
+  <router-view />
   <div class="invex-landing">
     <!-- Header -->
     <header class="header">
