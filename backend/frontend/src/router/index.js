@@ -1,12 +1,10 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import App from '../App.vue'
-import Registro from '../components/Registro.vue'
 import Principal from '../components/principal.vue'
+import Registro from '../components/Registro.vue'
 
 const routes = [
-  { path: '/', name: 'Home', component: App },
-  { path: '/registro', name: 'Registro', component: Registro },
-  { path: '/principal', name: 'Principal', component: Principal }
+  { path: '/', name: 'Principal', component: Principal },
+  { path: '/registro', name: 'Registro', component: Registro }
 ]
 
 const router = createRouter({

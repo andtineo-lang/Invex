@@ -1,52 +1,53 @@
 <template>
-  <form id="msform" @submit.prevent="handleSubmit">
-    <!-- Progressbar -->
-    <ul id="progressbar">
-      <li :class="{ active: step >= 1 }">Cuenta</li>
-      <li :class="{ active: step >= 2 }">Empresa</li>
-      <li :class="{ active: step >= 3 }">Confirmación</li>
-    </ul>
+  <div>
+    <Header /> <!-- Menú global -->
+    <form id="msform" @submit.prevent="handleSubmit">
+      <!-- Progressbar -->
+      <ul id="progressbar">
+        <li :class="{ active: step >= 1 }">Cuenta</li>
+        <li :class="{ active: step >= 2 }">Empresa</li>
+        <li :class="{ active: step >= 3 }">Confirmación</li>
+      </ul>
 
-    <!-- Step 1 -->
-    <fieldset v-if="step === 1">
-      <h2 class="fs-title">Crear tu cuenta</h2>
-      <h3 class="fs-subtitle">Paso 1</h3>
-      <input type="email" v-model="form.email" placeholder="Correo electrónico" required />
-      <input type="password" v-model="form.password" placeholder="Contraseña" required />
-      <input type="password" v-model="form.confirmPassword" placeholder="Confirmar contraseña" required />
-      <button type="button" class="action-button" @click="nextStep">Siguiente</button>
-    </fieldset>
+      <!-- Step 1 -->
+      <fieldset v-if="step === 1">
+        <h2 class="fs-title">Crear tu cuenta</h2>
+        <input type="email" v-model="form.email" placeholder="Correo electrónico" required />
+        <input type="password" v-model="form.password" placeholder="Contraseña" required />
+        <input type="password" v-model="form.confirmPassword" placeholder="Confirmar contraseña" required />
+        <button type="button" class="action-button" @click="nextStep">Siguiente</button>
+      </fieldset>
 
-    <!-- Step 2 -->
-    <fieldset v-if="step === 2">
-      <h2 class="fs-title">Datos de la Empresa</h2>
-      <h3 class="fs-subtitle">Paso 2</h3>
-      <input type="text" v-model="form.company" placeholder="Nombre de la empresa" required />
-      <input type="text" v-model="form.industry" placeholder="Industria (ej: Retail, Alimentos...)" />
-      <select v-model="form.plan" required>
-        <option value="">Selecciona un plan</option>
-        <option value="mensual">Mensual - $29</option>
-        <option value="semestral">Semestral - $149</option>
-        <option value="anual">Anual - $299</option>
-      </select>
-      <button type="button" class="action-button secondary" @click="prevStep">Atrás</button>
-      <button type="button" class="action-button" @click="nextStep">Siguiente</button>
-    </fieldset>
+      <!-- Step 2 -->
+      <fieldset v-if="step === 2">
+        <h2 class="fs-title">Datos de la Empresa</h2>
+        <input type="text" v-model="form.company" placeholder="Nombre de la empresa" required />
+        <input type="text" v-model="form.industry" placeholder="Industria (ej: Retail, Alimentos...)" />
+        <select v-model="form.plan" required>
+          <option value="">Selecciona un plan</option>
+          <option value="mensual">Mensual - $29</option>
+          <option value="semestral">Semestral - $149</option>
+          <option value="anual">Anual - $299</option>
+        </select>
+        <button type="button" class="action-button secondary" @click="prevStep">Atrás</button>
+        <button type="button" class="action-button" @click="nextStep">Siguiente</button>
+      </fieldset>
 
-    <!-- Step 3 -->
-    <fieldset v-if="step === 3">
-      <h2 class="fs-title">Confirmación</h2>
-      <h3 class="fs-subtitle">Revisa tus datos</h3>
-      <p><strong>Correo:</strong> {{ form.email }}</p>
-      <p><strong>Empresa:</strong> {{ form.company }}</p>
-      <p><strong>Plan:</strong> {{ form.plan }}</p>
-      <button type="button" class="action-button secondary" @click="prevStep">Atrás</button>
-      <button type="submit" class="action-button submit">Crear Cuenta</button>
-    </fieldset>
-  </form>
+      <!-- Step 3 -->
+      <fieldset v-if="step === 3">
+        <h2 class="fs-title">Confirmación</h2>
+        <p><strong>Correo:</strong> {{ form.email }}</p>
+        <p><strong>Empresa:</strong> {{ form.company }}</p>
+        <p><strong>Plan:</strong> {{ form.plan }}</p>
+        <button type="button" class="action-button secondary" @click="prevStep">Atrás</button>
+        <button type="submit" class="action-button submit">Crear Cuenta</button>
+      </fieldset>
+    </form>
+  </div>
 </template>
 
 <script setup>
+import Header from '@/components/Header.vue'
 import { ref, reactive } from 'vue'
 
 const step = ref(1)
@@ -63,7 +64,6 @@ const form = reactive({
 const nextStep = () => {
   if (step.value < 3) step.value++
 }
-
 const prevStep = () => {
   if (step.value > 1) step.value--
 }
@@ -78,7 +78,7 @@ const handleSubmit = () => {
 }
 </script>
 
-<style>
+<style scoped>
 @import url('https://fonts.googleapis.com/css?family=Inter:400,600,700&display=swap');
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
