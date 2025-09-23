@@ -15,7 +15,9 @@
           </nav>
 
           <div class="nav-buttons">
+            <router-link to="/login">
             <button class="btn-secondary">Iniciar Sesión</button>
+            </router-link>
             <router-link to="/registro">
               <button class="btn-primary">Crear Cuenta</button>
             </router-link>
