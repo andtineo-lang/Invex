@@ -1,6 +1,28 @@
 <template>
   <div class="invex-landing">
-    <Header /> <!-- Menú global -->
+    <!-- Header -->
+    <header class="header">
+      <div class="container">
+        <div class="nav-content">
+          <div class="logo">
+            <h1>INVEX</h1>
+          </div>
+
+          <!-- Menú Navegación -->
+          <nav class="nav-links">
+            <a @click.prevent="scrollToSection('about')">Sobre Nosotros</a>
+            <a @click.prevent="scrollToSection('pricing')">Planes de Suscripción</a>
+          </nav>
+
+          <div class="nav-buttons">
+            <button class="btn-secondary">Iniciar Sesión</button>
+            <router-link to="/registro">
+              <button class="btn-primary">Crear Cuenta</button>
+            </router-link>
+          </div>
+        </div>
+      </div>
+    </header>
 
     <!-- Hero Section -->
     <section class="hero" ref="heroRef">
@@ -10,14 +32,14 @@
             Gestión de Stock Inteligente con IA
           </h1>
           <p class="hero-subtitle" ref="subtitleRef">
-            Optimiza tu inventario con tecnología de inteligencia artificial. 
+            Optimiza tu inventario con tecnología de inteligencia artificial.
             Predice demanda, reduce costos y maximiza eficiencia.
           </p>
           <div class="hero-buttons" ref="buttonsRef">
             <router-link to="/registro">
-              <button class="btn-primary btn-large">Crear Cuenta</button>
+              <button class="btn-primary btn-large">Comenzar Gratis</button>
             </router-link>
-            <button class="btn-outline btn-large">Ver Demo</button>
+            <button class="btn-outline btn-large" @click="scrollToSection('pricing')">Ver Planes</button>
           </div>
           <div class="features-grid" ref="featuresRef">
             <div class="feature-card">
@@ -41,7 +63,7 @@
     </section>
 
     <!-- About Section -->
-    <section class="about" ref="aboutRef">
+    <section id="about" class="about" ref="aboutRef">
       <div class="container">
         <div class="section-header">
           <h2>Sobre Nosotros</h2>
@@ -51,9 +73,9 @@
           <div class="about-text">
             <h3>¿Qué hace INVEX?</h3>
             <p>
-              INVEX es una plataforma revolucionaria que utiliza inteligencia artificial 
-              para transformar la gestión de inventarios. Nuestro sistema aprende de tus 
-              patrones de venta, predice la demanda futura y optimiza automáticamente 
+              INVEX es una plataforma revolucionaria que utiliza inteligencia artificial
+              para transformar la gestión de inventarios. Nuestro sistema aprende de tus
+              patrones de venta, predice la demanda futura y optimiza automáticamente
               tus niveles de stock.
             </p>
             <div class="benefits">
@@ -96,7 +118,7 @@
     </section>
 
     <!-- Pricing Section -->
-    <section class="pricing" ref="pricingRef">
+    <section id="pricing" class="pricing" ref="pricingRef">
       <div class="container">
         <div class="section-header">
           <h2>Planes de Suscripción</h2>
@@ -197,10 +219,10 @@
 </template>
 
 <script setup>
-import Header from '@/components/Header.vue'
 import { ref, onMounted } from 'vue'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
+import { ScrollToPlugin } from 'gsap/ScrollToPlugin'
 
 const heroRef = ref(null)
 const titleRef = ref(null)
@@ -210,38 +232,81 @@ const featuresRef = ref(null)
 const aboutRef = ref(null)
 const pricingRef = ref(null)
 
-gsap.registerPlugin(ScrollTrigger)
+gsap.registerPlugin(ScrollTrigger, ScrollToPlugin)
+
+// Método para hacer scroll animado
+const scrollToSection = (id) => {
+  const section = document.getElementById(id)
+  if (section) {
+    gsap.to(window, {
+      duration: 1,
+      scrollTo: { y: section, offsetY: 80 },
+      ease: "power2.inOut"
+    })
+  }
+}
 
 onMounted(() => {
   if (typeof gsap !== 'undefined') {
-    gsap.set([titleRef.value, subtitleRef.value, buttonsRef.value], { opacity: 0, y: 50 })
-    gsap.set(featuresRef.value.children, { opacity: 0, y: 30 })
+    gsap.set([titleRef.value, subtitleRef.value, buttonsRef.value], {
+      opacity: 0,
+      y: 50
+    })
+
+    gsap.set(featuresRef.value.children, {
+      opacity: 0,
+      y: 30
+    })
 
     const tl = gsap.timeline()
-    tl.to(titleRef.value, { opacity: 1, y: 0, duration: 1 })
-      .to(subtitleRef.value, { opacity: 1, y: 0, duration: 0.8 }, "-=0.5")
-      .to(buttonsRef.value, { opacity: 1, y: 0, duration: 0.8 }, "-=0.3")
-      .to(featuresRef.value.children, { opacity: 1, y: 0, duration: 0.6, stagger: 0.2 }, "-=0.3")
 
-    gsap.fromTo(aboutRef.value.querySelector('.about-content'), 
-      { opacity: 0, y: 100 },
-      {
-        opacity: 1, y: 0, duration: 1, 
-        scrollTrigger: { trigger: aboutRef.value, start: "top 80%" }
-      }
-    )
-
-    gsap.fromTo(pricingRef.value.querySelectorAll('.pricing-card'),
-      { opacity: 0, y: 50, scale: 0.9 },
-      {
-        opacity: 1, y: 0, scale: 1, duration: 0.8, stagger: 0.2,
-        scrollTrigger: { trigger: pricingRef.value, start: "top 80%" }
-      }
-    )
+    tl.to(titleRef.value, {
+      opacity: 1,
+      y: 0,
+      duration: 1,
+      ease: "power3.out"
+    })
+      .to(subtitleRef.value, {
+        opacity: 1,
+        y: 0,
+        duration: 0.8,
+        ease: "power3.out"
+      }, "-=0.5")
+      .to(buttonsRef.value, {
+        opacity: 1,
+        y: 0,
+        duration: 0.8,
+        ease: "power3.out"
+      }, "-=0.3")
+      .to(featuresRef.value.children, {
+        opacity: 1,
+        y: 0,
+        duration: 0.6,
+        stagger: 0.2,
+        ease: "power3.out"
+      }, "-=0.3")
   }
 })
 </script>
 
 <style scoped>
-/* puedes mantener el mismo CSS que ya tienes en Principal.vue */
+/* Aquí puedes pegar el mismo CSS que ya tienes (lo de header, hero, about, pricing, etc.) */
+/* IMPORTANTE: agrega estilos para el nuevo menú de navegación */
+.nav-links {
+  display: flex;
+  gap: 1.5rem;
+  margin-left: 2rem;
+}
+
+.nav-links a {
+  color: #374151;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+.nav-links a:hover {
+  color: #0f766e;
+}
 </style>
