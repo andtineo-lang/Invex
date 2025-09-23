@@ -1,12 +1,12 @@
-<template>
+<template> 
   <div>
     <Header /> <!-- Menú global -->
-    <form id="msform" @submit.prevent="handleLogin">
-      <!-- SIN progressbar -->
 
-      <!-- login -->
+    <!-- Formulario de login -->
+    <form id="msform" @submit.prevent="handleLogin">
       <fieldset>
         <h2 class="fs-title">Inicia Sesión</h2>
+
         <input 
           type="email" 
           v-model="loginForm.email" 
@@ -22,17 +22,43 @@
 
         <button type="submit" class="action-button submit">Ingresar</button>
 
-        <!-- opcion de crear cuentas si es que no tines una -->
         <p class="fs-subtitle">
           ¿No tienes cuenta? 
           <router-link to="/registro">Crear cuenta</router-link>
         </p>
       </fieldset>
     </form>
+
+    <!-- 🔽 Footer -->
+    <footer class="footer">
+      <div class="footer-content">
+        <div class="footer-section">
+          <h3>INVEX</h3>
+          <p>Gestión inteligente de inventarios con IA</p>
+        </div>
+        <div class="footer-section">
+          <h4>Producto</h4>
+          <ul>
+            <li><router-link to="/caracteristicas">Características</router-link></li>
+            <li><router-link to="/precios">Precios</router-link></li>
+            <li><router-link to="/demo">Demo</router-link></li>
+          </ul>
+        </div>
+        <div class="footer-section">
+          <h4>Soporte</h4>
+          <ul>
+            <li><router-link to="/documentacion">Documentación</router-link></li>
+            <li><router-link to="/contacto">Contacto</router-link></li>
+            <li><router-link to="/faq">FAQ</router-link></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        © 2025 INVEX. Todos los derechos reservados.
+      </div>
+    </footer>
   </div>
 </template>
-
-
 
 <script setup>
 import Header from '@/components/Header.vue'
@@ -43,15 +69,23 @@ const loginForm = reactive({
   password: ''
 })
 
+const validarPassword = (password) => {
+  const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[^A-Za-z0-9]).{8,}$/
+  return regex.test(password)
+}
+
 const handleLogin = () => {
   if (!loginForm.email || !loginForm.password) {
     alert('Por favor completa todos los campos')
     return
   }
 
-  // Aquí conectarías con tu API de login (ejemplo con fetch o axios)
-  console.log('Iniciando sesión con:', loginForm)
+  if (!validarPassword(loginForm.password)) {
+    alert('La contraseña debe tener mínimo 8 caracteres, al menos 1 mayúscula, 1 minúscula y 1 carácter especial.')
+    return
+  }
 
+  console.log('Iniciando sesión con:', loginForm)
   alert(`Bienvenido ${loginForm.email}`)
 }
 </script>
@@ -127,5 +161,54 @@ body {
   font-size: 0.9rem;
   color: #6b7280;
   margin-top: 15px;
+}
+
+/* Footer */
+.footer {
+  background: #1f2937;
+  color: white;
+  padding: 3rem 0 1rem;
+}
+
+.footer-content {
+  max-width: 1000px;   /* ancho fijo centrado */
+  margin: 0 auto;      /* centra horizontalmente */
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 2rem;
+  margin-bottom: 2rem;
+  text-align: center;  /* centra el contenido */
+}
+
+.footer-section h3,
+.footer-section h4 {
+  margin-bottom: 1rem;
+  color: #0f766e;
+}
+
+.footer-section ul {
+  list-style: none;
+  padding: 0;
+}
+
+.footer-section ul li {
+  margin-bottom: 0.5rem;
+}
+
+.footer-section a {
+  color: #d1d5db;
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+.footer-section a:hover {
+  color: #0f766e;
+}
+
+.footer-bottom {
+  border-top: 1px solid #374151;
+  padding-top: 1rem;
+  text-align: center;
+  color: #9ca3af;
 }
 </style>
