@@ -213,7 +213,7 @@
           </div>
         </div>
         <div class="footer-bottom">
-          <p>&copy; 2024 INVEX. Todos los derechos reservados.</p>
+          <p>&copy; 2025 INVEX. Todos los derechos reservados.</p>
         </div>
       </div>
     </footer>

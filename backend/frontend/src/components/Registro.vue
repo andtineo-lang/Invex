@@ -43,6 +43,34 @@
         <button type="submit" class="action-button submit">Crear Cuenta</button>
       </fieldset>
     </form>
+    <!-- 🔽 Footer agregado -->
+    <footer class="footer">
+      <div class="footer-content">
+        <div class="footer-section">
+          <h3>INVEX</h3>
+          <p>Gestión inteligente de inventarios con IA</p>
+        </div>
+        <div class="footer-section">
+          <h4>Producto</h4>
+          <ul>
+            <li><router-link to="/caracteristicas">Características</router-link></li>
+            <li><router-link to="/precios">Precios</router-link></li>
+            <li><router-link to="/demo">Demo</router-link></li>
+          </ul>
+        </div>
+        <div class="footer-section">
+          <h4>Soporte</h4>
+          <ul>
+            <li><router-link to="/documentacion">Documentación</router-link></li>
+            <li><router-link to="/contacto">Contacto</router-link></li>
+            <li><router-link to="/faq">FAQ</router-link></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        © 2025 INVEX. Todos los derechos reservados.
+      </div>
+    </footer>
   </div>
 </template>
 
@@ -216,4 +244,55 @@ body {
 #progressbar li.active + li:after {
   background: #0f766e;
 }
+
+/* Footer */
+.footer {
+  background: #1f2937;
+  color: white;
+  padding: 3rem 0 1rem;
+}
+
+.footer-content {
+  max-width: 1000px;   /* ancho fijo centrado */
+  margin: 0 auto;      /* centra horizontalmente */
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 2rem;
+  margin-bottom: 2rem;
+  text-align: center;  /* centra el contenido */
+}
+
+.footer-section h3,
+.footer-section h4 {
+  margin-bottom: 1rem;
+  color: #0f766e;
+}
+
+.footer-section ul {
+  list-style: none;
+  padding: 0;
+}
+
+.footer-section ul li {
+  margin-bottom: 0.5rem;
+}
+
+.footer-section a {
+  color: #d1d5db;
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+.footer-section a:hover {
+  color: #0f766e;
+}
+
+.footer-bottom {
+  border-top: 1px solid #374151;
+  padding-top: 1rem;
+  text-align: center;
+  color: #9ca3af;
+}
 </style>
+
+
