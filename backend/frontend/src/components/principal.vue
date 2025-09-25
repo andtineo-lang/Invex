@@ -1,33 +1,11 @@
 <template>
   <div class="invex-landing">
-    <!-- Header -->
-    <header class="header">
-      <div class="container">
-        <div class="nav-content">
-          <div class="logo">
-            <h1>INVEX</h1>
-          </div>
-
-          <!-- Menú Navegación -->
-          <nav class="nav-links">
-            <a @click.prevent="scrollToSection('about')">Sobre Nosotros</a>
-            <a @click.prevent="scrollToSection('pricing')">Planes de Suscripción</a>
-          </nav>
-
-          <div class="nav-buttons">
-            <router-link to="/login">
-            <button class="btn-secondary">Iniciar Sesión</button>
-            </router-link>
-            <router-link to="/registro">
-              <button class="btn-primary">Crear Cuenta</button>
-            </router-link>
-          </div>
-        </div>
-      </div>
-    </header>
+    <!-- Header con menú -->
+    <Header />
+   
 
     <!-- Hero Section -->
-    <section class="hero" ref="heroRef">
+    <section id="hero" class="hero" ref="heroRef">
       <div class="container">
         <div class="hero-content">
           <h1 class="hero-title" ref="titleRef">
@@ -41,7 +19,9 @@
             <router-link to="/registro">
               <button class="btn-primary btn-large">Comenzar Gratis</button>
             </router-link>
-            <button class="btn-outline btn-large" @click="scrollToSection('pricing')">Ver Planes</button>
+            <button class="btn-outline btn-large" @click="scrollToSection('pricing')">
+              Ver Planes
+            </button>
           </div>
           <div class="features-grid" ref="featuresRef">
             <div class="feature-card">
@@ -186,57 +166,25 @@
         </div>
       </div>
     </section>
-
-    <!-- Footer -->
-    <footer class="footer">
-      <div class="container">
-        <div class="footer-content">
-          <div class="footer-section">
-            <h3>INVEX</h3>
-            <p>Gestión inteligente de inventarios con IA</p>
-          </div>
-          <div class="footer-section">
-            <h4>Producto</h4>
-            <ul>
-              <li><a href="#">Características</a></li>
-              <li><a href="#">Precios</a></li>
-              <li><a href="#">Demo</a></li>
-            </ul>
-          </div>
-          <div class="footer-section">
-            <h4>Soporte</h4>
-            <ul>
-              <li><a href="#">Documentación</a></li>
-              <li><a href="#">Contacto</a></li>
-              <li><a href="#">FAQ</a></li>
-            </ul>
-          </div>
-        </div>
-        <div class="footer-bottom">
-          <p>&copy; 2025 INVEX. Todos los derechos reservados.</p>
-        </div>
-      </div>
-    </footer>
   </div>
 </template>
 
 <script setup>
+
+import Header from './Header.vue'
 import { ref, onMounted } from 'vue'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { ScrollToPlugin } from 'gsap/ScrollToPlugin'
+
+gsap.registerPlugin(ScrollTrigger, ScrollToPlugin)
 
 const heroRef = ref(null)
 const titleRef = ref(null)
 const subtitleRef = ref(null)
 const buttonsRef = ref(null)
 const featuresRef = ref(null)
-const aboutRef = ref(null)
-const pricingRef = ref(null)
 
-gsap.registerPlugin(ScrollTrigger, ScrollToPlugin)
-
-// Método para hacer scroll animado
 const scrollToSection = (id) => {
   const section = document.getElementById(id)
   if (section) {
@@ -249,51 +197,26 @@ const scrollToSection = (id) => {
 }
 
 onMounted(() => {
-  if (typeof gsap !== 'undefined') {
-    gsap.set([titleRef.value, subtitleRef.value, buttonsRef.value], {
-      opacity: 0,
-      y: 50
-    })
+  gsap.set([titleRef.value, subtitleRef.value, buttonsRef.value], {
+    opacity: 0,
+    y: 50
+  })
+  gsap.set(featuresRef.value.children, { opacity: 0, y: 30 })
 
-    gsap.set(featuresRef.value.children, {
-      opacity: 0,
-      y: 30
-    })
-
-    const tl = gsap.timeline()
-
-    tl.to(titleRef.value, {
+  gsap.timeline()
+    .to(titleRef.value, { opacity: 1, y: 0, duration: 1 })
+    .to(subtitleRef.value, { opacity: 1, y: 0, duration: 0.8 }, "-=0.5")
+    .to(buttonsRef.value, { opacity: 1, y: 0, duration: 0.8 }, "-=0.3")
+    .to(featuresRef.value.children, {
       opacity: 1,
       y: 0,
-      duration: 1,
-      ease: "power3.out"
-    })
-      .to(subtitleRef.value, {
-        opacity: 1,
-        y: 0,
-        duration: 0.8,
-        ease: "power3.out"
-      }, "-=0.5")
-      .to(buttonsRef.value, {
-        opacity: 1,
-        y: 0,
-        duration: 0.8,
-        ease: "power3.out"
-      }, "-=0.3")
-      .to(featuresRef.value.children, {
-        opacity: 1,
-        y: 0,
-        duration: 0.6,
-        stagger: 0.2,
-        ease: "power3.out"
-      }, "-=0.3")
-  }
+      duration: 0.6,
+      stagger: 0.2
+    }, "-=0.3")
 })
 </script>
 
 <style scoped>
-/* Aquí puedes pegar el mismo CSS que ya tienes (lo de header, hero, about, pricing, etc.) */
-/* IMPORTANTE: agrega estilos para el nuevo menú de navegación */
 .nav-links {
   display: flex;
   gap: 1.5rem;

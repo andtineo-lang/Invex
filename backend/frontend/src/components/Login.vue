@@ -1,62 +1,51 @@
-<template> 
-  <div>
-    <Header /> <!-- Menú global -->
+<template>
+  <div class="invex-landing">
+    <!-- Header -->
+    <Header />
 
-    <!-- Formulario de login -->
-    <form id="msform" @submit.prevent="handleLogin">
-      <fieldset>
-        <h2 class="fs-title">Inicia Sesión</h2>
-
-        <input 
-          type="email" 
-          v-model="loginForm.email" 
-          placeholder="Correo electrónico" 
-          required 
-        />
-        <input 
-          type="password" 
-          v-model="loginForm.password" 
-          placeholder="Contraseña" 
-          required 
-        />
-
-        <button type="submit" class="action-button submit">Ingresar</button>
-
-        <p class="fs-subtitle">
-          ¿No tienes cuenta? 
-          <router-link to="/registro">Crear cuenta</router-link>
-        </p>
-      </fieldset>
-    </form>
-
-    <!-- 🔽 Footer -->
-    <footer class="footer">
-      <div class="footer-content">
-        <div class="footer-section">
-          <h3>INVEX</h3>
-          <p>Gestión inteligente de inventarios con IA</p>
-        </div>
-        <div class="footer-section">
-          <h4>Producto</h4>
-          <ul>
-            <li><router-link to="/caracteristicas">Características</router-link></li>
-            <li><router-link to="/precios">Precios</router-link></li>
-            <li><router-link to="/demo">Demo</router-link></li>
+    <!-- Main -->
+    <main class="main-content">
+      <div class="login-container">
+        <!-- Columna izquierda con branding -->
+        <div class="login-left">
+          <h2>🚀 Bienvenido a INVEX</h2>
+          <p>La forma más inteligente de gestionar tu inventario.</p>
+          <ul class="benefits">
+            <li>📊 Predicciones de demanda en tiempo real</li>
+            <li>⚡ Automatización de reabastecimiento</li>
+            <li>📈 Optimización de costos y stock</li>
           </ul>
         </div>
-        <div class="footer-section">
-          <h4>Soporte</h4>
-          <ul>
-            <li><router-link to="/documentacion">Documentación</router-link></li>
-            <li><router-link to="/contacto">Contacto</router-link></li>
-            <li><router-link to="/faq">FAQ</router-link></li>
-          </ul>
+
+        <!-- Columna derecha con formulario -->
+        <div class="login-right">
+          <form id="msform" @submit.prevent="handleLogin">
+            <fieldset>
+              <h2 class="fs-title">Inicia Sesión</h2>
+              <input 
+                type="email" 
+                v-model="loginForm.email" 
+                placeholder="Correo electrónico" 
+                required 
+              />
+              <input 
+                type="password" 
+                v-model="loginForm.password" 
+                placeholder="Contraseña" 
+                required 
+              />
+              <button type="submit" class="action-button submit">Ingresar</button>
+              <p class="fs-subtitle">
+                ¿No tienes cuenta? 
+                <router-link to="/registro">Crear cuenta</router-link>
+              </p>
+            </fieldset>
+          </form>
         </div>
       </div>
-      <div class="footer-bottom">
-        © 2025 INVEX. Todos los derechos reservados.
-      </div>
-    </footer>
+    </main>
+
+   
   </div>
 </template>
 
@@ -91,29 +80,74 @@ const handleLogin = () => {
 </script>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css?family=Inter:400,600,700&display=swap');
-* { margin: 0; padding: 0; box-sizing: border-box; }
+.invex-landing {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(135deg, #f0fdfa, #ecfdf5); /* Fondo elegante */
+}
 
-body {
-  font-family: 'Inter', sans-serif;
-  background: #f9fafb;
-  color: #1f2937;
+.main-content {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 3rem 1rem;
+}
+
+.login-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  max-width: 1000px;
+  width: 100%;
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05); /* más leve */
+  overflow: hidden;
+}
+
+/* Columna izquierda */
+.login-left {
+  background: linear-gradient(135deg, #0f766e, #0d9488);
+  color: white;
+  padding: 3rem 2rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.login-left h2 {
+  font-size: 1.8rem;
+  margin-bottom: 1rem;
+}
+
+.login-left p {
+  margin-bottom: 2rem;
+  font-size: 1rem;
+  opacity: 0.9;
+}
+
+.benefits {
+  list-style: none;
+  padding: 0;
+}
+
+.benefits li {
+  margin-bottom: 1rem;
+  font-size: 1rem;
+}
+
+/* Columna derecha */
+.login-right {
+  padding: 3rem 2rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 #msform {
-  width: 450px;
-  margin: 50px auto;
-  text-align: center;
-  position: relative;
-}
-
-#msform fieldset {
-  background: #fff;
-  border: none;
-  border-radius: 12px;
-  box-shadow: 0 8px 25px rgba(0,0,0,0.08);
-  padding: 30px 40px;
   width: 100%;
+  max-width: 400px;
 }
 
 #msform input {
@@ -123,11 +157,12 @@ body {
   margin-bottom: 15px;
   width: 100%;
   font-size: 14px;
-  transition: border 0.3s, box-shadow 0.3s;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05); /* más leve */
 }
+
 #msform input:focus {
   border-color: #0f766e;
-  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.2);
+box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05); /* más leve */
   outline: none;
 }
 
@@ -136,79 +171,72 @@ body {
   color: white;
   border: none;
   padding: 12px 20px;
-  margin: 10px 5px;
+  margin: 10px 0;
   border-radius: 8px;
   cursor: pointer;
   font-weight: 600;
   transition: transform 0.2s, box-shadow 0.2s;
+  width: 100%;
 }
+
 .action-button:hover {
   transform: translateY(-2px);
   box-shadow: 0 6px 15px rgba(15,118,110,0.3);
 }
-.submit {
-  width: 100%;
-  background: linear-gradient(135deg, #0f766e, #0d9488);
-}
 
 .fs-title {
-  font-size: 1.25rem;
+  font-size: 1.5rem;
   font-weight: 700;
-  margin-bottom: 10px;
+  margin-bottom: 20px;
   color: #0f766e;
 }
+
 .fs-subtitle {
   font-size: 0.9rem;
   color: #6b7280;
   margin-top: 15px;
 }
 
-/* Footer */
-.footer {
-  background: #1f2937;
-  color: white;
-  padding: 3rem 0 1rem;
+
+
+/* eliminación de el borde gris feo */
+#msform fieldset {
+  border: none !important; 
 }
 
-.footer-content {
-  max-width: 1000px;   /* ancho fijo centrado */
-  margin: 0 auto;      /* centra horizontalmente */
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 2rem;
-  margin-bottom: 2rem;
-  text-align: center;  /* centra el contenido */
+
+/* Responsive */
+@media (max-width: 768px) {
+  .login-container {
+    grid-template-columns: 1fr;
+  }
+  .login-left {
+    display: none; /* Ocultar branding en móvil */
+  }
 }
 
-.footer-section h3,
-.footer-section h4 {
-  margin-bottom: 1rem;
-  color: #0f766e;
+.login-container {
+  animation: fadeInUp 0.8s ease-in-out;
 }
 
-.footer-section ul {
-  list-style: none;
-  padding: 0;
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-.footer-section ul li {
-  margin-bottom: 0.5rem;
+.benefits li {
+  transition: transform 0.2s ease, color 0.2s ease;
+}
+.benefits li:hover {
+  transform: translateX(5px);
+  color: #facc15; /* amarillo elegante */
 }
 
-.footer-section a {
-  color: #d1d5db;
-  text-decoration: none;
-  transition: color 0.3s ease;
+#msform {
+ box-shadow: none !important; /* elimina la sombra */
+  background: transparent !important; /* asegura que no quede fondo */
 }
 
-.footer-section a:hover {
-  color: #0f766e;
-}
 
-.footer-bottom {
-  border-top: 1px solid #374151;
-  padding-top: 1rem;
-  text-align: center;
-  color: #9ca3af;
-}
+
 </style>
