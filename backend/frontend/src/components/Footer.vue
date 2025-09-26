@@ -10,7 +10,6 @@
         <ul>
           <li><router-link to="/caracteristicas">Características</router-link></li>
           <li><router-link to="/precios">Precios</router-link></li>
-          <li><router-link to="/demo">Demo</router-link></li>
         </ul>
       </div>
       <div class="footer-section">
