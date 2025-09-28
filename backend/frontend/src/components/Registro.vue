@@ -19,6 +19,11 @@
         <input type="password" v-model="form.password" placeholder="Contraseña" required />
         <input type="password" v-model="form.confirmPassword" placeholder="Confirmar contraseña" required />
         <button type="button" class="action-button" @click="nextStep">Siguiente</button>
+          <!-- ✅ Nueva opción para usuarios con cuenta -->
+  <p class="redirect-login">
+    ¿Ya tienes una cuenta? 
+    <router-link to="/login">Inicia sesión aquí</router-link>
+  </p>
       </fieldset>
 
       <!-- Step 2 -->
@@ -30,7 +35,7 @@
         </div>
         <div class="input-group">
           <input type="text" v-model="form.company" placeholder="Nombre de la empresa" required />
-          <small class="hint">Ejemplo: farmacyLtda.</small>
+          <small class="hint">Ejemplo: Farmacy Ltda.</small>
         </div>
         <div class="input-group">
           <input type="text" v-model="form.industry" placeholder="Rubro (ej: Retail, Alimentos...)" required />
@@ -84,7 +89,17 @@
         </div>
       </fieldset>
     </div>
-  </div>
+
+    <!-- ✅ Modal -->
+    <div v-if="showModal" class="modal-overlay">
+      <div class="modal-box">
+        <h2>{{ modalTitle }}</h2>
+        <p>{{ modalMessage }}</p>
+        <button @click="showModal = false">Cerrar</button>
+      </div>
+    </div>
+
+  </div> 
 </template>
 
 <script setup>
@@ -92,6 +107,9 @@ import Header from '@/components/Header.vue'
 import { ref, reactive } from 'vue'
 
 const step = ref(1)
+const showModal = ref(false)
+const modalTitle = ref('')
+const modalMessage = ref('')
 
 const form = reactive({
   email: '',
@@ -125,59 +143,53 @@ const plans = [
   }
 ]
 
+// ✅ Abrir modal
+const openModal = (title, message) => {
+  modalTitle.value = title
+  modalMessage.value = message
+  showModal.value = true
+}
+
 // ---------------------- VALIDACIONES ----------------------
-const validarEmail = (email) => {
-  const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-  return regex.test(email)
-}
-
-const validarPassword = (password) => {
-  const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/
-  return regex.test(password)
-}
-
-const validarRut = (rut) => {
-  const regex = /^\d{1,2}\.\d{3}\.\d{3}-[\dkK]$/
-  return regex.test(rut)
-}
+const validarEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+const validarPassword = (password) => /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/.test(password)
+const validarRut = (rut) => /^\d{1,2}\.\d{3}\.\d{3}-[\dkK]$/.test(rut)
 
 // ---------------------- NAVEGACIÓN ENTRE PASOS ----------------------
 const nextStep = () => {
   if (step.value === 1) {
     if (!form.email || !form.password || !form.confirmPassword) {
-      alert('Por favor completa todos los campos')
+      openModal('⚠️ Campos incompletos', 'Por favor completa todos los campos.')
       return
     }
     if (!validarEmail(form.email)) {
-      alert('Por favor ingresa un correo válido')
+      openModal('📧 Correo inválido', 'Por favor ingresa un correo válido.')
       return
     }
     if (!validarPassword(form.password)) {
-      alert('La contraseña debe tener mínimo 8 caracteres, incluir mayúscula, minúscula, número y carácter especial.')
+      openModal('🔐 Contraseña inválida', 'Debe tener mínimo 8 caracteres, incluir mayúscula, minúscula, número y carácter especial.')
       return
     }
     if (form.password !== form.confirmPassword) {
-      alert('Las contraseñas no coinciden')
+      openModal('❌ Contraseñas diferentes', 'Las contraseñas no coinciden.')
       return
     }
   }
 
   if (step.value === 2) {
     if (!form.rut || !form.company || !form.industry) {
-      alert('Por favor completa todos los campos de la empresa')
+      openModal('🏢 Datos incompletos', 'Por favor completa todos los datos de la empresa.')
       return
     }
     if (!validarRut(form.rut)) {
-      alert('El RUT no tiene un formato válido (ej: 12.345.678-9)')
+      openModal('🆔 RUT inválido', 'El formato debe ser como 12.345.678-9.')
       return
     }
   }
 
-  if (step.value === 3) {
-    if (!form.plan) {
-      alert('Por favor selecciona un plan antes de continuar')
-      return
-    }
+  if (step.value === 3 && !form.plan) {
+    openModal('📌 Selección requerida', 'Por favor selecciona un plan antes de continuar.')
+    return
   }
 
   if (step.value < 4) step.value++
@@ -189,15 +201,20 @@ const prevStep = () => {
 
 // ---------------------- FINALIZAR REGISTRO ----------------------
 const handleRegister = () => {
-  alert('✅ Registro exitoso con los siguientes datos:\n' +
-    `Correo: ${form.email}\nEmpresa: ${form.company}\nRUT: ${form.rut}\nRubro: ${form.industry}\nPlan: ${form.plan}`
+  openModal(
+    '✅ Registro exitoso',
+    `Se ha creado la cuenta con los siguientes datos:\n\n📧 Correo: ${form.email}\n🏢 Empresa: ${form.company}\n🆔 RUT: ${form.rut}\n🏭 Rubro: ${form.industry}\n💳 Plan: ${form.plan}`
   )
 }
-
 </script>
 
 <style scoped>
-/* --- Mantengo todos tus estilos tal cual los tenías --- */
+/* Mantengo todos tus estilos originales del formulario */
+</style>
+
+
+<style scoped>
+
 
 .invex-landing {
   min-height: 100vh;
@@ -472,4 +489,59 @@ input:focus {
     align-items: center;
   }
 }
+/* Modal Overlay */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.6); /* Fondo oscuro */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+/* Caja del modal */
+.modal-box {
+  background: #fff;
+  border-radius: 12px;
+  padding: 2rem;
+  max-width: 400px;
+  width: 90%;
+  text-align: center;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+}
+
+/* Título */
+.modal-box h2 {
+  font-size: 1.3rem;
+  font-weight: bold;
+  margin-bottom: 1rem;
+}
+
+/* Mensaje */
+.modal-box p {
+  font-size: 1rem;
+  color: #374151;
+  margin-bottom: 1.5rem;
+  white-space: pre-line; /* respeta saltos de línea */
+}
+
+/* Botón */
+.modal-box button {
+  padding: 0.6rem 1.2rem;
+  background: #2563eb; /* Azul */
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background 0.3s;
+}
+.modal-box button:hover {
+  background: #1d4ed8;
+}
+
 </style>

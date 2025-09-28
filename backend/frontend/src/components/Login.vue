@@ -45,18 +45,36 @@
       </div>
     </main>
 
-   
-  </div>
+    <!-- ✅ Modal -->
+    <div v-if="showModal" class="modal-overlay">
+      <div class="modal-box">
+        <h2>{{ modalTitle }}</h2>
+        <p>{{ modalMessage }}</p>
+        <button @click="showModal = false">Cerrar</button>
+      </div>
+    </div>
+  </div> <!-- 🔥 cierre que faltaba -->
 </template>
 
 <script setup>
 import Header from '@/components/Header.vue'
-import { reactive } from 'vue'
+import { reactive, ref } from 'vue'
 
 const loginForm = reactive({
   email: '',
   password: ''
 })
+
+// Modal
+const showModal = ref(false)
+const modalTitle = ref('')
+const modalMessage = ref('')
+
+const openModal = (title, message) => {
+  modalTitle.value = title
+  modalMessage.value = message
+  showModal.value = true
+}
 
 const validarPassword = (password) => {
   const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[^A-Za-z0-9]).{8,}$/
@@ -65,26 +83,26 @@ const validarPassword = (password) => {
 
 const handleLogin = () => {
   if (!loginForm.email || !loginForm.password) {
-    alert('Por favor completa todos los campos')
+    openModal('⚠️ Campos incompletos', 'Por favor completa todos los campos')
     return
   }
 
   if (!validarPassword(loginForm.password)) {
-    alert('La contraseña debe tener mínimo 8 caracteres, al menos 1 mayúscula, 1 minúscula y 1 carácter especial.')
+    openModal('🔐 Contraseña inválida', 'Debe tener mínimo 8 caracteres, al menos 1 mayúscula, 1 minúscula y 1 carácter especial.')
     return
   }
 
-  console.log('Iniciando sesión con:', loginForm)
-  alert(`Bienvenido ${loginForm.email}`)
+  openModal('✅ Bienvenido', `Inicio de sesión correcto para ${loginForm.email}`)
 }
 </script>
 
 <style scoped>
+/* 🔹 Mantengo todos tus estilos originales, solo se agrega modal */
 .invex-landing {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background: linear-gradient(135deg, #f0fdfa, #ecfdf5); /* Fondo elegante */
+  background: linear-gradient(135deg, #f0fdfa, #ecfdf5);
 }
 
 .main-content {
@@ -102,7 +120,7 @@ const handleLogin = () => {
   width: 100%;
   background: #fff;
   border-radius: 16px;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05); /* más leve */
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
   overflow: hidden;
 }
 
@@ -157,12 +175,11 @@ const handleLogin = () => {
   margin-bottom: 15px;
   width: 100%;
   font-size: 14px;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05); /* más leve */
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
 }
 
 #msform input:focus {
   border-color: #0f766e;
-box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05); /* más leve */
   outline: none;
 }
 
@@ -197,13 +214,10 @@ box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05); /* más leve */
   margin-top: 15px;
 }
 
-
-
-/* eliminación de el borde gris feo */
+/* eliminación de borde feo */
 #msform fieldset {
   border: none !important; 
 }
-
 
 /* Responsive */
 @media (max-width: 768px) {
@@ -211,10 +225,11 @@ box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05); /* más leve */
     grid-template-columns: 1fr;
   }
   .login-left {
-    display: none; /* Ocultar branding en móvil */
+    display: none;
   }
 }
 
+/* Animación */
 .login-container {
   animation: fadeInUp 0.8s ease-in-out;
 }
@@ -224,19 +239,64 @@ box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05); /* más leve */
   to { opacity: 1; transform: translateY(0); }
 }
 
+/* Hover beneficios */
 .benefits li {
   transition: transform 0.2s ease, color 0.2s ease;
 }
 .benefits li:hover {
   transform: translateX(5px);
-  color: #facc15; /* amarillo elegante */
+  color: #facc15;
 }
 
 #msform {
- box-shadow: none !important; /* elimina la sombra */
-  background: transparent !important; /* asegura que no quede fondo */
+ box-shadow: none !important;
+ background: transparent !important;
 }
 
-
-
+/* ✅ Modal */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+.modal-box {
+  background: #fff;
+  border-radius: 12px;
+  padding: 2rem;
+  max-width: 400px;
+  width: 90%;
+  text-align: center;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+}
+.modal-box h2 {
+  font-size: 1.3rem;
+  font-weight: bold;
+  margin-bottom: 1rem;
+}
+.modal-box p {
+  font-size: 1rem;
+  color: #374151;
+  margin-bottom: 1.5rem;
+  white-space: pre-line;
+}
+.modal-box button {
+  padding: 0.6rem 1.2rem;
+  background: #2563eb;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background 0.3s;
+}
+.modal-box button:hover {
+  background: #1d4ed8;
+}
 </style>
