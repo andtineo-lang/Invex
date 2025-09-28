@@ -30,7 +30,7 @@
         </div>
         <div class="input-group">
           <input type="text" v-model="form.company" placeholder="Nombre de la empresa" required />
-          <small class="hint">Ejemplo: Agroprodel Ltda.</small>
+          <small class="hint">Ejemplo: farmacyLtda.</small>
         </div>
         <div class="input-group">
           <input type="text" v-model="form.industry" placeholder="Rubro (ej: Retail, Alimentos...)" required />
@@ -42,7 +42,7 @@
         </div>
       </fieldset>
 
-          <!-- Step 3 -->
+      <!-- Step 3 -->
       <fieldset v-if="step === 3">
         <h2 class="fs-title">Selecciona un plan</h2>
         <div class="plans-grid">
@@ -66,7 +66,6 @@
         </div>
       </fieldset>
 
-
       <!-- Step 4 -->
       <fieldset v-if="step === 4">
         <h2 class="fs-title">Confirmación</h2>
@@ -79,12 +78,12 @@
         </div>
         <div class="buttons">
           <button type="button" class="action-button secondary" @click="prevStep">Atrás</button>
-          <button type="submit" class="action-button submit">Crear Cuenta</button>
+          <button type="button" class="action-button submit" @click="handleRegister">
+            Crear Cuenta
+          </button>
         </div>
       </fieldset>
     </div>
-
- 
   </div>
 </template>
 
@@ -126,24 +125,88 @@ const plans = [
   }
 ]
 
+// ---------------------- VALIDACIONES ----------------------
+const validarEmail = (email) => {
+  const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  return regex.test(email)
+}
+
+const validarPassword = (password) => {
+  const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/
+  return regex.test(password)
+}
+
+const validarRut = (rut) => {
+  const regex = /^\d{1,2}\.\d{3}\.\d{3}-[\dkK]$/
+  return regex.test(rut)
+}
+
+// ---------------------- NAVEGACIÓN ENTRE PASOS ----------------------
 const nextStep = () => {
+  if (step.value === 1) {
+    if (!form.email || !form.password || !form.confirmPassword) {
+      alert('Por favor completa todos los campos')
+      return
+    }
+    if (!validarEmail(form.email)) {
+      alert('Por favor ingresa un correo válido')
+      return
+    }
+    if (!validarPassword(form.password)) {
+      alert('La contraseña debe tener mínimo 8 caracteres, incluir mayúscula, minúscula, número y carácter especial.')
+      return
+    }
+    if (form.password !== form.confirmPassword) {
+      alert('Las contraseñas no coinciden')
+      return
+    }
+  }
+
+  if (step.value === 2) {
+    if (!form.rut || !form.company || !form.industry) {
+      alert('Por favor completa todos los campos de la empresa')
+      return
+    }
+    if (!validarRut(form.rut)) {
+      alert('El RUT no tiene un formato válido (ej: 12.345.678-9)')
+      return
+    }
+  }
+
+  if (step.value === 3) {
+    if (!form.plan) {
+      alert('Por favor selecciona un plan antes de continuar')
+      return
+    }
+  }
+
   if (step.value < 4) step.value++
 }
+
 const prevStep = () => {
   if (step.value > 1) step.value--
 }
+
+// ---------------------- FINALIZAR REGISTRO ----------------------
+const handleRegister = () => {
+  alert('✅ Registro exitoso con los siguientes datos:\n' +
+    `Correo: ${form.email}\nEmpresa: ${form.company}\nRUT: ${form.rut}\nRubro: ${form.industry}\nPlan: ${form.plan}`
+  )
+}
+
 </script>
 
 <style scoped>
+/* --- Mantengo todos tus estilos tal cual los tenías --- */
 
 .invex-landing {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  justify-content: center;   /* Centra verticalmente */
-  align-items: center;       /* Centra horizontalmente */
+  justify-content: center;
+  align-items: center;
   background: linear-gradient(135deg, #f0fdfa, #ecfdf5);
-  padding: 2rem 1rem;        /* espacio de seguridad en pantallas pequeñas */
+  padding: 2rem 1rem;
 }
 
 .registro-container {
@@ -154,8 +217,6 @@ const prevStep = () => {
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
   padding: 2.5rem 3rem;
   text-align: center;
-
-  /* Animación como login */
   animation: fadeInUp 0.8s ease-in-out;
 }
 
@@ -170,8 +231,6 @@ const prevStep = () => {
   }
 }
 
-
-/* Progressbar */
 #progressbar {
   display: flex;
   justify-content: space-between;
@@ -221,7 +280,6 @@ const prevStep = () => {
   content: none;
 }
 
-/* Paso activo */
 #progressbar li.active {
   color: #0f766e;
 }
@@ -233,7 +291,6 @@ const prevStep = () => {
   background: #0f766e;
 }
 
-/* Fieldsets como tarjetas */
 .registro-container fieldset {
   border: none;
   outline: none;
@@ -251,7 +308,6 @@ const prevStep = () => {
   text-align: center;
 }
 
-/* Inputs */
 input {
   padding: 14px;
   border: 1.5px solid #e5e7eb;
@@ -266,7 +322,6 @@ input:focus {
   outline: none;
 }
 
-/* Botones */
 .buttons {
   display: flex;
   justify-content: center;
@@ -297,8 +352,6 @@ input:focus {
   background: linear-gradient(135deg, #0f766e, #0d9488);
 }
 
-/* Planes */
-/* Contenedor de planes */
 .plans-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
@@ -307,7 +360,6 @@ input:focus {
   margin-top: 2rem;
 }
 
-/* Tarjeta de plan */
 .plan-card {
   background: #fff;
   border: 2px solid #e5e7eb;
@@ -333,7 +385,6 @@ input:focus {
   box-shadow: 0 12px 30px rgba(15,118,110,0.25);
 }
 
-/* Badge */
 .badge {
   background: #f59e0b;
   color: #fff;
@@ -348,7 +399,6 @@ input:focus {
   box-shadow: 0 4px 10px rgba(0,0,0,0.1);
 }
 
-/* Títulos y precios */
 .plan-card h3 {
   font-size: 1.2rem;
   font-weight: 700;
@@ -369,7 +419,6 @@ input:focus {
   color: #6b7280;
 }
 
-/* Lista de características */
 .plan-card ul {
   list-style: none;
   padding: 0;
@@ -392,7 +441,6 @@ input:focus {
   margin-right: 0.5rem;
 }
 
-/* Botón dentro de tarjeta */
 .plan-card button {
   background: linear-gradient(135deg, #0f766e, #0d9488);
   color: white;
@@ -409,7 +457,6 @@ input:focus {
   box-shadow: 0 6px 15px rgba(15,118,110,0.3);
 }
 
-/* Confirmación */
 .confirm-card {
   background: #f9fafb;
   padding: 1.5rem;
@@ -419,13 +466,10 @@ input:focus {
   line-height: 1.6;
 }
 
-/* Responsive */
 @media (max-width: 768px) {
   .plans-grid {
     flex-direction: column;
     align-items: center;
   }
 }
-
-
 </style>
