@@ -8,7 +8,7 @@
       <div class="login-container">
         <!-- Columna izquierda con branding -->
         <div class="login-left">
-          <h2>🚀 Bienvenido a INVEX</h2>
+          <h2>🚀 Bienvenido a INVEX!!</h2>
           <p>La forma más inteligente de gestionar tu inventario.</p>
           <ul class="benefits">
             <li>📊 Predicciones de demanda en tiempo real</li>
