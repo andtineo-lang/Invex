@@ -13,10 +13,13 @@
 </template>
 
 <script setup>
+/* eslint-disable no-undef */
 defineProps({
   show: Boolean,
   title: String,
   message: String
 })
+
 defineEmits(['close'])
+/* eslint-enable no-undef */
 </script>
