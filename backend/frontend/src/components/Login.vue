@@ -1,4 +1,4 @@
-<template>
+<template> 
   <div class="invex-landing">
     <!-- Header -->
     <Header />
@@ -8,7 +8,7 @@
       <div class="login-container">
         <!-- Columna izquierda con branding -->
         <div class="login-left">
-          <h2>🚀 Bienvenido a INVEX!!</h2>
+          <h2>🚀 Bienvenido a INVEX</h2>
           <p>La forma más inteligente de gestionar tu inventario.</p>
           <ul class="benefits">
             <li>📊 Predicciones de demanda en tiempo real</li>
@@ -28,6 +28,15 @@
                 placeholder="Correo electrónico" 
                 required 
               />
+
+              <!--campo Empresa -->
+              <input 
+                type="text" 
+                v-model="loginForm.empresa" 
+                placeholder="Empresa" 
+                required 
+              />
+
               <input 
                 type="password" 
                 v-model="loginForm.password" 
@@ -40,9 +49,7 @@
                 <router-link to="/registro">Crear cuenta</router-link>
                 ¿Olvidaste tu contraseña?
                 <router-link to="/recuperar-password">Recupérala aquí</router-link>
-                
               </p>
-
             </fieldset>
           </form>
         </div>
@@ -57,7 +64,7 @@
         <button @click="showModal = false">Cerrar</button>
       </div>
     </div>
-  </div> <!-- 🔥 cierre que faltaba -->
+  </div> 
 </template>
 
 <script setup>
@@ -66,6 +73,7 @@ import { reactive, ref } from 'vue'
 
 const loginForm = reactive({
   email: '',
+  empresa: '', 
   password: ''
 })
 
@@ -86,7 +94,7 @@ const validarPassword = (password) => {
 }
 
 const handleLogin = () => {
-  if (!loginForm.email || !loginForm.password) {
+  if (!loginForm.email || !loginForm.password || !loginForm.empresa) {
     openModal('⚠️ Campos incompletos', 'Por favor completa todos los campos')
     return
   }
@@ -96,9 +104,10 @@ const handleLogin = () => {
     return
   }
 
-  openModal('✅ Bienvenido', `Inicio de sesión correcto para ${loginForm.email}`)
+  openModal('✅ Bienvenido', `Inicio de sesión correcto para ${loginForm.email} en la empresa ${loginForm.empresa}`)
 }
 </script>
+
 
 <style scoped>
 /* 🔹 Mantengo todos tus estilos originales, solo se agrega modal */
