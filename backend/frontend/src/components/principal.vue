@@ -3,7 +3,6 @@
     <!-- Header con menú -->
     <Header />
    
-
     <!-- Hero Section -->
     <section id="hero" class="hero" ref="heroRef">
       <div class="container">
