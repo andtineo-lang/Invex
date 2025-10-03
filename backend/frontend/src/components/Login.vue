@@ -38,7 +38,11 @@
               <p class="fs-subtitle">
                 ¿No tienes cuenta? 
                 <router-link to="/registro">Crear cuenta</router-link>
+                ¿Olvidaste tu contraseña?
+                <router-link to="/recuperar-password">Recupérala aquí</router-link>
+                
               </p>
+
             </fieldset>
           </form>
         </div>

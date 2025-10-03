@@ -8,6 +8,7 @@ import Proyecciones from '../components/proyecciones.vue'
 import Reportes from '../components/reportes.vue'
 import Configuracion from '../components/configuracion.vue'
 import Invex from '../components/Invex.vue'
+import RecuperarPassword from '../components/RecuperarPassword.vue'
 
 const routes = [
   { 
@@ -26,10 +27,15 @@ const routes = [
     component: Registro 
   },
   { 
+    path: '/recuperar-password', 
+    name: 'RecuperarPassword', 
+    component: RecuperarPassword 
+  },
+  { 
     path: '/inventario', 
     name: 'Inventario', 
     component: Inventario,
-    meta: { requiresAuth: true } // opcional: si quieres proteger la ruta
+    meta: { requiresAuth: true }
   },
   { 
     path: '/usuarios', 
@@ -60,7 +66,6 @@ const routes = [
     name: 'Invex', 
     component: Invex 
   }
-  // Header, Footer y Modal no necesitan rutas porque son componentes reutilizables
 ]
 
 const router = createRouter({
@@ -76,19 +81,5 @@ const router = createRouter({
     return { top: 0, behavior: 'smooth' }
   }
 })
-
-// 🔒 OPCIONAL: Guard de navegación para rutas protegidas
-// Descomenta esto si quieres proteger rutas que requieren autenticación
-/*
-router.beforeEach((to, from, next) => {
-  const isAuthenticated = localStorage.getItem('userToken') // o tu método de auth
-  
-  if (to.meta.requiresAuth && !isAuthenticated) {
-    next('/login')
-  } else {
-    next()
-  }
-})
-*/
 
 export default router
