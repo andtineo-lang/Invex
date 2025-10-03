@@ -1,109 +1,74 @@
 <template>
-  <div class="min-h-screen bg-green-50">
-    <!-- Barra de navegación superior -->
-    <nav class="bg-teal-600 shadow-lg">
-      <div class="max-w-7xl mx-auto px-4">
-        <div class="flex items-center justify-between h-16">
-          <!-- Logo INVEX -->
-          <div class="flex-shrink-0">
-            <h1 class="text-2xl font-bold text-white">INVEX</h1>
-          </div>
-
-          <!-- Botones de navegación -->
-          <div class="flex space-x-1">
-            <button 
-              v-for="item in navItems" 
-              :key="item.name"
-              @click="navigateTo(item.path)"
-              :class="[
-                'px-4 py-2 rounded-lg text-sm font-medium transition-colors',
-                item.path === 'usuarios.vue'
-                  ? 'bg-white text-teal-600'
-                  : 'text-white hover:bg-teal-500'
-              ]"
-            >
-              {{ item.name }}
-            </button>
-          </div>
-        </div>
+  <div class="max-w-7xl mx-auto px-4 py-8">
+    <!-- Encabezado -->
+    <div class="mb-6">
+      <div class="flex items-center space-x-2 mb-2">
+        <svg class="w-8 h-8 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M17 20h5v-2a3 3 0 00-3-3h-2M6 20H1v-2a3 3 0 013-3h2m7-6h.01M12 12a9 9 0 110-18 9 9 0 010 18z" />
+        </svg>
+        <h2 class="text-3xl font-bold text-gray-900">Gestión de Usuarios</h2>
       </div>
-    </nav>
+    </div>
 
-    <!-- Contenido de Gestión de Usuarios -->
-    <div class="max-w-7xl mx-auto px-4 py-8">
-      <!-- Encabezado -->
-      <div class="mb-6">
-        <div class="flex items-center space-x-2 mb-2">
-          <svg class="w-8 h-8 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-3-3h-2M6 20H1v-2a3 3 0 013-3h2m7-6h.01M12 12a9 9 0 110-18 9 9 0 010 18z" />
-          </svg>
-          <h2 class="text-3xl font-bold text-gray-900">Gestión de Usuarios</h2>
-        </div>
-      </div>
+    <!-- Botón Agregar Nuevo Usuario -->
+    <div class="flex justify-end mb-6">
+      <button @click="agregarUsuario"
+        class="bg-green-500 text-white px-4 py-2 rounded-lg font-semibold hover:bg-green-600 transition">
+        + Agregar Nuevo Usuario
+      </button>
+    </div>
 
-      <!-- Botón Agregar Nuevo Usuario -->
-      <div class="flex justify-end mb-6">
-        <button @click="agregarUsuario" class="bg-green-500 text-white px-4 py-2 rounded-lg font-semibold hover:bg-green-600 transition">
-          + Agregar Nuevo Usuario
-        </button>
-      </div>
-
-      <!-- Lista de Usuarios -->
-      <div class="bg-white rounded-lg shadow-lg divide-y">
-        <div v-for="usuario in usuarios" :key="usuario.id" class="flex items-center justify-between p-4">
-          <div class="flex items-center space-x-4">
-            <!-- Avatar con iniciales -->
-            <div class="w-12 h-12 flex items-center justify-center rounded-full bg-purple-500 text-white font-bold">
-              {{ usuario.iniciales }}
-            </div>
-            <div>
-              <h4 class="text-lg font-bold text-gray-900">{{ usuario.nombre }}</h4>
-              <p class="text-sm text-gray-600">{{ usuario.correo }}</p>
-              <span :class="getRolClass(usuario.rol)" class="inline-block mt-1 px-2 py-1 text-xs font-semibold rounded-full">
-                {{ usuario.rol }}
-              </span>
-            </div>
+    <!-- Lista de Usuarios -->
+    <div class="bg-white rounded-lg shadow-lg divide-y">
+      <div v-for="usuario in usuarios" :key="usuario.id" class="flex items-center justify-between p-4">
+        <div class="flex items-center space-x-4">
+          <!-- Avatar con iniciales -->
+          <div class="w-12 h-12 flex items-center justify-center rounded-full bg-purple-500 text-white font-bold">
+            {{ usuario.iniciales }}
           </div>
-          <div class="flex space-x-2">
-            <button @click="editarPermisos(usuario)" class="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 transition">
-              Editar Permisos
-            </button>
-            <button @click="verActividad(usuario)" class="bg-gray-500 text-white px-3 py-1 rounded hover:bg-gray-600 transition">
-              Ver Actividad
-            </button>
+          <div>
+            <h4 class="text-lg font-bold text-gray-900">{{ usuario.nombre }}</h4>
+            <p class="text-sm text-gray-600">{{ usuario.correo }}</p>
+            <span :class="getRolClass(usuario.rol)"
+              class="inline-block mt-1 px-2 py-1 text-xs font-semibold rounded-full">
+              {{ usuario.rol }}
+            </span>
           </div>
         </div>
+        <div class="flex space-x-2">
+          <button @click="editarPermisos(usuario)"
+            class="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 transition">
+            Editar Permisos
+          </button>
+          <button @click="verActividad(usuario)"
+            class="bg-gray-500 text-white px-3 py-1 rounded hover:bg-gray-600 transition">
+            Ver Actividad
+          </button>
+        </div>
       </div>
+    </div>
 
-      <!-- Aprobaciones Pendientes -->
-      <div class="mt-8 bg-yellow-100 border-l-4 border-yellow-500 rounded-lg p-4">
-        <h3 class="text-lg font-bold text-yellow-700 flex items-center space-x-2 mb-2">
-          <svg class="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M12 18h.01M9 21h6a2 2 0 002-2v-4a2 2 0 00-2-2h-6a2 2 0 00-2 2v4a2 2 0 002 2z" />
-          </svg>
-          <span>Aprobaciones Pendientes</span>
-        </h3>
-        <ul class="list-disc list-inside text-gray-700 space-y-1">
-          <li v-for="(aprobacion, index) in aprobacionesPendientes" :key="index">
-            {{ aprobacion }}
-          </li>
-        </ul>
-      </div>
+    <!-- Aprobaciones Pendientes -->
+    <div class="mt-8 bg-yellow-100 border-l-4 border-yellow-500 rounded-lg p-4">
+      <h3 class="text-lg font-bold text-yellow-700 flex items-center space-x-2 mb-2">
+        <svg class="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M13 16h-1v-4h-1m1-4h.01M12 18h.01M9 21h6a2 2 0 002-2v-4a2 2 0 00-2-2h-6a2 2 0 00-2 2v4a2 2 0 002 2z" />
+        </svg>
+        <span>Aprobaciones Pendientes</span>
+      </h3>
+      <ul class="list-disc list-inside text-gray-700 space-y-1">
+        <li v-for="(aprobacion, index) in aprobacionesPendientes" :key="index">
+          {{ aprobacion }}
+        </li>
+      </ul>
     </div>
   </div>
 </template>
 
 <script setup>
 import { ref } from 'vue'
-
-const navItems = [
-  { name: 'Dashboard', path: 'dashboard.vue' },
-  { name: 'Inventario', path: 'inventario.vue' },
-  { name: 'Proyecciones', path: 'proyecciones.vue' },
-  { name: 'Reportes', path: 'reportes.vue' },
-  { name: 'Usuarios', path: 'usuarios.vue' },
-  { name: 'Configuración', path: 'configuracion.vue' }
-]
 
 // Lista de usuarios
 const usuarios = ref([
@@ -136,12 +101,6 @@ const aprobacionesPendientes = ref([
   'Cambio de Stock: Roberto García propuso ajustar el inventario de luces navideñas.',
   'Permiso de acceso: Se requiere aprobación para un nuevo usuario.'
 ])
-
-const navigateTo = (path) => {
-  console.log(`Navegando a: ${path}`)
-  // Para uso con Vue Router:
-  // router.push({ path: `/${path.replace('.vue','')}` })
-}
 
 const agregarUsuario = () => {
   alert('Funcionalidad para agregar nuevo usuario')
