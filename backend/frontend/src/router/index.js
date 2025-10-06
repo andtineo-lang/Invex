@@ -15,6 +15,13 @@ import Reportes from '../components/reportes.vue'
 import Configuracion from '../components/configuracion.vue'
 import RecuperarPassword from '../components/RecuperarPassword.vue'
 
+// Importar las vistas
+import Caracteristicas from '../components/caracteristicas.vue'
+import Precios from '../components/precios.vue'
+import Documentacion from '../components/documentacion.vue'
+import Contacto from '../components/contacto.vue'
+import Faq from '../components/faq.vue'
+
 const routes = [
   { 
     path: '/', 
@@ -41,6 +48,33 @@ const routes = [
     name: 'Invex', 
     component: Invex 
   },
+  // --- Páginas del Footer ---
+  { 
+    path: '/caracteristicas', 
+    name: 'Caracteristicas', 
+    component: Caracteristicas 
+  },
+  { 
+    path: '/precios', 
+    name: 'Precios', 
+    component: Precios 
+  },
+  { 
+    path: '/documentacion', 
+    name: 'Documentacion', 
+    component: Documentacion 
+  },
+  { 
+    path: '/contacto', 
+    name: 'Contacto', 
+    component: Contacto 
+  },
+  { 
+    path: '/faq', 
+    name: 'Faq', 
+    component: Faq 
+  },
+
 
   // Rutas del dashboard agrupadas bajo el layout
   {
