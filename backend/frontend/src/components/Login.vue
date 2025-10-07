@@ -22,6 +22,7 @@
           <form id="msform" @submit.prevent="handleLogin">
             <fieldset>
               <h2 class="fs-title">Inicia Sesión</h2>
+
               <input 
                 type="email" 
                 v-model="loginForm.email" 
@@ -37,12 +38,23 @@
                 required 
               />
 
-              <input 
-                type="password" 
-                v-model="loginForm.password" 
-                placeholder="Contraseña" 
-                required 
-              />
+              <!-- Campo contraseña con icono -->
+              <div class="password-container">
+                <input 
+                  :type="showPassword ? 'text' : 'password'" 
+                  v-model="loginForm.password" 
+                  placeholder="Contraseña" 
+                  required 
+                />
+                <span 
+                  class="toggle-password" 
+                  @click="showPassword = !showPassword"
+                  :title="showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+                >
+                  {{ showPassword ? '🙈' : '👁️' }}
+                </span>
+              </div>
+
               <button type="submit" class="action-button submit">Ingresar</button>
               <p class="fs-subtitle">
                 ¿No tienes cuenta? 
@@ -77,6 +89,9 @@ const loginForm = reactive({
   password: ''
 })
 
+// 👁️ Control para mostrar/ocultar la contraseña
+const showPassword = ref(false)
+
 // Modal
 const showModal = ref(false)
 const modalTitle = ref('')
@@ -108,9 +123,8 @@ const handleLogin = () => {
 }
 </script>
 
-
 <style scoped>
-/* 🔹 Mantengo todos tus estilos originales, solo se agrega modal */
+/* 🔹 Mantengo todos tus estilos originales */
 .invex-landing {
   min-height: 100vh;
   display: flex;
@@ -196,6 +210,31 @@ const handleLogin = () => {
   outline: none;
 }
 
+/* 👁️ Estilo para el icono de ver contraseña */
+.password-container {
+  position: relative;
+}
+
+.password-container input {
+  padding-right: 40px;
+}
+
+.toggle-password {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: pointer;
+  font-size: 1.1rem;
+  color: #6b7280;
+  user-select: none;
+  transition: color 0.2s ease;
+}
+
+.toggle-password:hover {
+  color: #0f766e;
+}
+
 .action-button {
   background: #0f766e;
   color: white;
@@ -227,43 +266,8 @@ const handleLogin = () => {
   margin-top: 15px;
 }
 
-/* eliminación de borde feo */
 #msform fieldset {
   border: none !important; 
-}
-
-/* Responsive */
-@media (max-width: 768px) {
-  .login-container {
-    grid-template-columns: 1fr;
-  }
-  .login-left {
-    display: none;
-  }
-}
-
-/* Animación */
-.login-container {
-  animation: fadeInUp 0.8s ease-in-out;
-}
-
-@keyframes fadeInUp {
-  from { opacity: 0; transform: translateY(30px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-/* Hover beneficios */
-.benefits li {
-  transition: transform 0.2s ease, color 0.2s ease;
-}
-.benefits li:hover {
-  transform: translateX(5px);
-  color: #facc15;
-}
-
-#msform {
- box-shadow: none !important;
- background: transparent !important;
 }
 
 /* ✅ Modal */

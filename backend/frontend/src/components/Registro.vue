@@ -16,14 +16,40 @@
       <fieldset v-if="step === 1">
         <h2 class="fs-title">Crear tu cuenta</h2>
         <input type="email" v-model="form.email" placeholder="Correo electrónico" required />
-        <input type="password" v-model="form.password" placeholder="Contraseña" required />
-        <input type="password" v-model="form.confirmPassword" placeholder="Confirmar contraseña" required />
+
+        <!-- Contraseña -->
+        <div class="password-container">
+          <input
+            :type="showPassword ? 'text' : 'password'"
+            v-model="form.password"
+            placeholder="Contraseña"
+            required
+          />
+          <span class="toggle-icon" @click="showPassword = !showPassword">
+            {{ showPassword ? '🙈' : '👁️' }}
+          </span>
+        </div>
+
+        <!-- Confirmar Contraseña -->
+        <div class="password-container">
+          <input
+            :type="showConfirm ? 'text' : 'password'"
+            v-model="form.confirmPassword"
+            placeholder="Confirmar contraseña"
+            required
+          />
+          <span class="toggle-icon" @click="showConfirm = !showConfirm">
+            {{ showConfirm ? '🙈' : '👁️' }}
+          </span>
+        </div>
+
         <button type="button" class="action-button" @click="nextStep">Siguiente</button>
-          <!-- ✅ Nueva opción para usuarios con cuenta -->
-  <p class="redirect-login">
-    ¿Ya tienes una cuenta? 
-    <router-link to="/login">Inicia sesión aquí</router-link>
-  </p>
+
+        <!-- ✅ Nueva opción para usuarios con cuenta -->
+        <p class="redirect-login">
+          ¿Ya tienes una cuenta?
+          <router-link to="/login">Inicia sesión aquí</router-link>
+        </p>
       </fieldset>
 
       <!-- Step 2 -->
@@ -98,8 +124,7 @@
         <button @click="showModal = false">Cerrar</button>
       </div>
     </div>
-
-  </div> 
+  </div>
 </template>
 
 <script setup>
@@ -110,6 +135,10 @@ const step = ref(1)
 const showModal = ref(false)
 const modalTitle = ref('')
 const modalMessage = ref('')
+
+// 👁️ Mostrar/ocultar contraseñas
+const showPassword = ref(false)
+const showConfirm = ref(false)
 
 const form = reactive({
   email: '',
@@ -143,7 +172,7 @@ const plans = [
   }
 ]
 
-// ✅ Abrir modal
+// ✅ Modal
 const openModal = (title, message) => {
   modalTitle.value = title
   modalMessage.value = message
@@ -159,37 +188,30 @@ const validarRut = (rut) => /^\d{1,2}\.\d{3}\.\d{3}-[\dkK]$/.test(rut)
 const nextStep = () => {
   if (step.value === 1) {
     if (!form.email || !form.password || !form.confirmPassword) {
-      openModal('⚠️ Campos incompletos', 'Por favor completa todos los campos.')
-      return
+      return openModal('⚠️ Campos incompletos', 'Por favor completa todos los campos.')
     }
     if (!validarEmail(form.email)) {
-      openModal('📧 Correo inválido', 'Por favor ingresa un correo válido.')
-      return
+      return openModal('📧 Correo inválido', 'Por favor ingresa un correo válido.')
     }
     if (!validarPassword(form.password)) {
-      openModal('🔐 Contraseña inválida', 'Debe tener mínimo 8 caracteres, incluir mayúscula, minúscula, número y carácter especial.')
-      return
+      return openModal('🔐 Contraseña inválida', 'Debe tener mínimo 8 caracteres, incluir mayúscula, minúscula, número y carácter especial.')
     }
     if (form.password !== form.confirmPassword) {
-      openModal('❌ Contraseñas diferentes', 'Las contraseñas no coinciden.')
-      return
+      return openModal('❌ Contraseñas diferentes', 'Las contraseñas no coinciden.')
     }
   }
 
   if (step.value === 2) {
     if (!form.rut || !form.company || !form.industry) {
-      openModal('🏢 Datos incompletos', 'Por favor completa todos los datos de la empresa.')
-      return
+      return openModal('🏢 Datos incompletos', 'Por favor completa todos los datos de la empresa.')
     }
     if (!validarRut(form.rut)) {
-      openModal('🆔 RUT inválido', 'El formato debe ser como 12.345.678-9.')
-      return
+      return openModal('🆔 RUT inválido', 'El formato debe ser como 12.345.678-9.')
     }
   }
 
   if (step.value === 3 && !form.plan) {
-    openModal('📌 Selección requerida', 'Por favor selecciona un plan antes de continuar.')
-    return
+    return openModal('📌 Selección requerida', 'Por favor selecciona un plan antes de continuar.')
   }
 
   if (step.value < 4) step.value++
@@ -209,12 +231,23 @@ const handleRegister = () => {
 </script>
 
 <style scoped>
-/* Mantengo todos tus estilos originales del formulario */
-</style>
-
-
-<style scoped>
-
+/* 👁️ Estilo para ver/ocultar contraseña */
+.password-container {
+  position: relative;
+}
+.toggle-icon {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: pointer;
+  user-select: none;
+  font-size: 1.1rem;
+  opacity: 0.7;
+}
+.toggle-icon:hover {
+  opacity: 1;
+}
 
 .invex-landing {
   min-height: 100vh;
