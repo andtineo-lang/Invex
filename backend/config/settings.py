@@ -82,8 +82,12 @@ WSGI_APPLICATION = 'config.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql', # <-- ¡CAMBIO CLAVE!
+        'NAME': 'invex_db',                        # <-- Nombre de tu base de datos en PostgreSQL
+        'USER': 'postgres',                      # <-- Usuario de PostgreSQL
+        'PASSWORD': 'AKAMARU',         # <-- Contraseña del usuario
+        'HOST': 'localhost',                       # <-- Dirección del servidor de PostgreSQL (o la IP)
+        'PORT': '5432',                            # <-- Puerto de PostgreSQL (el predeterminado es 5432)
     }
 }
 
