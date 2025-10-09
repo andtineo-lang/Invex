@@ -126,12 +126,12 @@ REST_FRAMEWORK = {
 
 # 2. Configuración de CORS para Vue.js
 # Esto permite que tu frontend Vue (ej: en puerto 8080 o 5173) se comunique con Django (puerto 8000)
-CORS_ALLOW_ALL_ORIGINS = True # *Ideal para desarrollo local*
-# CORS_ALLOWED_ORIGINS = [ # Opción más segura, puedes habilitarla más tarde
-#     "http://localhost:8080",
-#     "http://127.0.0.1:8080",
-#     "http://localhost:5173",
-# ]
+
+CORS_ALLOWED_ORIGINS = [ # Opción más segura, puedes habilitarla más tarde
+    "http://localhost:8080",
+    "http://127.0.0.1:8080",
+    "http://localhost:5173",
+]
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
