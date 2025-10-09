@@ -2,7 +2,7 @@
   <div class="invex-landing">
     <!-- Header con menú -->
     <Header />
-   
+
     <!-- Hero Section -->
     <section id="hero" class="hero" ref="heroRef">
       <div class="container">
@@ -121,7 +121,8 @@
               <li>Reportes mensuales</li>
               <li>Soporte por email</li>
             </ul>
-            <button class="btn-outline btn-full">Comenzar</button>
+            <!-- BOTÓN MODIFICADO -->
+            <button class="btn-outline btn-full" @click="redirectToAuth">Comenzar</button>
           </div>
 
           <div class="pricing-card featured">
@@ -141,7 +142,8 @@
               <li>Soporte prioritario</li>
               <li>Integraciones API</li>
             </ul>
-            <button class="btn-primary btn-full">Comenzar</button>
+            <!-- BOTÓN MODIFICADO -->
+            <button class="btn-primary btn-full" @click="redirectToAuth">Comenzar</button>
           </div>
 
           <div class="pricing-card">
@@ -160,7 +162,8 @@
               <li>Soporte 24/7</li>
               <li>Consultoría personalizada</li>
             </ul>
-            <button class="btn-outline btn-full">Comenzar</button>
+            <!-- BOTÓN MODIFICADO -->
+            <button class="btn-outline btn-full" @click="redirectToAuth">Comenzar</button>
           </div>
         </div>
       </div>
@@ -169,14 +172,17 @@
 </template>
 
 <script setup>
-
 import Header from './Header.vue'
 import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router' // 1. Importar useRouter para la navegación
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { ScrollToPlugin } from 'gsap/ScrollToPlugin'
 
 gsap.registerPlugin(ScrollTrigger, ScrollToPlugin)
+
+// 2. Obtener la instancia del router
+const router = useRouter()
 
 const heroRef = ref(null)
 const titleRef = ref(null)
@@ -193,6 +199,13 @@ const scrollToSection = (id) => {
       ease: "power2.inOut"
     })
   }
+}
+
+// 3. Crear la función que redirige al usuario
+const redirectToAuth = () => {
+  // Se usa la ruta '/registro' que ya tienes en tu <router-link>
+  // Puedes cambiarla a '/login' si es necesario.
+  router.push('/registro')
 }
 
 onMounted(() => {
