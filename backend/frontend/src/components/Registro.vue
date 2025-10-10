@@ -56,7 +56,15 @@
       <fieldset v-if="step === 2">
         <h2 class="fs-title">Datos de la Empresa</h2>
         <div class="input-group">
-          <input type="text" v-model="form.rut" placeholder="RUT de la empresa" required />
+          <!-- ✅ CAMBIO AQUÍ: Se cambió v-model por :value y @input -->
+          <input 
+            type="text" 
+            :value="form.rut" 
+            @input="handleRutInput"
+            placeholder="RUT de la empresa" 
+            required 
+            maxlength="12"
+          />
           <small class="hint">Ejemplo: 76.543.210-K</small>
         </div>
         <div class="input-group">
@@ -151,7 +159,7 @@
 
 <script setup>
 import Header from '@/components/Header.vue'
-import { ref, reactive, computed } from 'vue' // 'watch' eliminado
+import { ref, reactive, computed } from 'vue'
 import { useRoute } from 'vue-router'
 
 const route = useRoute()
@@ -174,6 +182,29 @@ const form = reactive({
   industry: '',
   plan: route.query.plan || ''
 })
+
+// ✅ NUEVA FUNCIÓN para formatear el RUT
+const handleRutInput = (event) => {
+  let value = event.target.value.replace(/[^\dkK]/g, '');
+
+  if (!value) {
+    form.rut = '';
+    return;
+  }
+  
+  value = value.replace(/[.-]/g, '');
+
+  const body = value.slice(0, -1);
+  const dv = value.slice(-1).toUpperCase();
+
+  if (body) {
+    const formattedBody = body.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+    form.rut = `${formattedBody}-${dv}`;
+  } else {
+    form.rut = dv;
+  }
+};
+
 
 const plans = [
   {
@@ -210,7 +241,7 @@ const openModal = (title, message) => {
 
 const validarEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
 const validarPassword = (password) => /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/.test(password)
-const validarRut = (rut) => /^\d{1,2}\.\d{3}\.\d{3}-[\dkK]$/.test(rut)
+const validarRut = (rut) => /^\d{1,2}(\.\d{3}){2}-[\dkK]$/.test(rut)
 
 const nextStep = () => {
   if (step.value === 1) {
@@ -248,9 +279,8 @@ const prevStep = () => {
   if (step.value > 1) step.value--
 }
 
-// Lógica de pago actualizada para llamar al backend
 const handlePayment = async () => {
-  if (isLoading.value) return; // Evita múltiples clics
+  if (isLoading.value) return; 
   isLoading.value = true;
   
   try {
