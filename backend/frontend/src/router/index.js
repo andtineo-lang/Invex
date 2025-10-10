@@ -8,13 +8,20 @@ import Usuarios from '../components/usuarios.vue'
 import Proyecciones from '../components/proyecciones.vue'
 import Reportes from '../components/reportes.vue'
 import Configuracion from '../components/configuracion.vue'
-// ...otros imports...
+// ✅ 1. IMPORTA EL COMPONENTE DE CONFIRMACIÓN
+import ConfirmacionPago from '@/components/ConfirmacionPago.vue'
 
 const routes = [
   { path: '/', name: 'Principal', component: Principal },
   { path: '/login', name: 'Login', component: Login },
   { path: '/registro', name: 'Registro', component: Registro },
-  // ...otras rutas públicas...
+  
+  // ✅ 2. AÑADE LA NUEVA RUTA PARA LA CONFIRMACIÓN DEL PAGO
+  { 
+    path: '/pago/confirmacion', 
+    name: 'ConfirmacionPago', 
+    component: ConfirmacionPago 
+  },
 
   // Rutas del dashboard agrupadas bajo el layout
   {
@@ -63,7 +70,6 @@ const routes = [
 const router = createRouter({
   history: createWebHistory(),
   routes,
-  // ... scrollBehavior
 })
 
 // 🔒 Guard de navegación con roles (ACTIVADO)
@@ -75,13 +81,13 @@ router.beforeEach((to, from, next) => {
     return next('/login');
   }
 
-  // La comprobación de roles solo se aplica a las rutas hijas que tienen 'meta.roles'
   if (to.meta.roles && !to.meta.roles.includes(userRole)) {
-    alert('No tienes permiso para acceder a esta página.'); // Opcional: mostrar alerta
-    return next('/dashboard/inventario'); // Redirige si no tiene permiso
+    alert('No tienes permiso para acceder a esta página.'); 
+    return next('/dashboard/inventario'); 
   }
 
   next();
 })
 
 export default router
+
