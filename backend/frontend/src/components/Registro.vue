@@ -120,37 +120,30 @@
 
       <!-- Step 5: Payment -->
       <fieldset v-if="step === 5">
-        <h2 class="fs-title">Realizar Pago</h2>
+        <h2 class="fs-title">Confirmar Pago</h2>
         <div class="payment-summary">
             <p>Estás a punto de suscribirte al <strong>{{ form.plan }}</strong>.</p>
             <p class="total-amount">Total a pagar: <strong>${{ selectedPlanPrice }}</strong></p>
-        </div>
-        
-        <!-- Contenedor para la tarjeta de crédito (simulado) -->
-        <div id="card-element">
-          <input type="text" placeholder="Número de la tarjeta" />
-          <div class="card-details">
-            <input type="text" placeholder="MM/AA" />
-            <input type="text" placeholder="CVC" />
-          </div>
+            <p class="redirect-message">Serás redirigido a la plataforma de pago segura de Transbank.</p>
         </div>
         
         <div class="buttons">
-          <button type="button" class="action-button secondary" @click="prevStep">Atrás</button>
-          <button type="button" class="action-button submit" @click="handlePayment" :disabled="isLoading">
-            <span v-if="!isLoading">Pagar Ahora</span>
-            <span v-else class="spinner"></span>
-          </button>
+            <button type="button" class="action-button secondary" @click="prevStep" :disabled="isLoading">Atrás</button>
+            <button type="button" class="action-button submit" @click="handlePayment" :disabled="isLoading">
+                <span v-if="!isLoading">Pagar Ahora</span>
+                <span v-else class="spinner"></span>
+            </button>
         </div>
+
       </fieldset>
     </div>
 
-    <!-- Modal -->
+    <!-- Modal para errores -->
     <div v-if="showModal" class="modal-overlay">
       <div class="modal-box">
         <h2>{{ modalTitle }}</h2>
         <p>{{ modalMessage }}</p>
-        <button @click="closeModalAndRedirect">Cerrar</button>
+        <button @click="showModal = false">Cerrar</button>
       </div>
     </div>
   </div>
@@ -158,18 +151,16 @@
 
 <script setup>
 import Header from '@/components/Header.vue'
-import { ref, reactive, computed } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { ref, reactive, computed } from 'vue' // 'watch' eliminado
+import { useRoute } from 'vue-router'
 
 const route = useRoute()
-const router = useRouter()
 
 const step = ref(1)
 const showModal = ref(false)
 const modalTitle = ref('')
 const modalMessage = ref('')
 const isLoading = ref(false)
-const paymentSuccess = ref(false)
 
 const showPassword = ref(false)
 const showConfirm = ref(false)
@@ -206,7 +197,6 @@ const plans = [
   }
 ]
 
-// Propiedad computada para obtener el precio del plan seleccionado
 const selectedPlanPrice = computed(() => {
     const selectedPlan = plans.find(p => p.name === form.plan);
     return selectedPlan ? selectedPlan.price : 0;
@@ -216,13 +206,6 @@ const openModal = (title, message) => {
   modalTitle.value = title
   modalMessage.value = message
   showModal.value = true
-}
-
-const closeModalAndRedirect = () => {
-    showModal.value = false;
-    if (paymentSuccess.value) {
-        router.push('/inventario'); // Redirigir al inventario tras pago exitoso
-    }
 }
 
 const validarEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
@@ -265,20 +248,50 @@ const prevStep = () => {
   if (step.value > 1) step.value--
 }
 
-const handlePayment = () => {
+// Lógica de pago actualizada para llamar al backend
+const handlePayment = async () => {
+  if (isLoading.value) return; // Evita múltiples clics
   isLoading.value = true;
-  console.log('Procesando pago para:', form.plan, 'por un total de $', selectedPlanPrice.value);
+  
+  try {
+    const response = await fetch('http://127.0.0.1:5000/api/create-transaction', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        buy_order: `bo_invex_${Date.now()}`,
+        session_id: `sid_invex_${Date.now()}`,
+        amount: selectedPlanPrice.value,
+        user_data: {
+          email: form.email,
+          company: form.company,
+          rut: form.rut,
+          plan: form.plan
+        }
+      }),
+    });
 
-  // Simulación de una llamada a una API de pago
-  setTimeout(() => {
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'El servidor no pudo crear la transacción.');
+    }
+
+    const data = await response.json();
+
+    if (data && data.url_redirect) {
+      window.location.href = data.url_redirect;
+    } else {
+      throw new Error('La respuesta del servidor no contiene una URL de redirección.');
+    }
+
+  } catch (error) {
+    console.error('Error al iniciar el pago:', error);
+    openModal('❌ Error de Pago', `No se pudo iniciar el proceso de pago. ${error.message}`);
     isLoading.value = false;
-    paymentSuccess.value = true;
-    openModal(
-      '✅ ¡Pago Exitoso!',
-      'Tu cuenta ha sido creada y el pago se ha procesado correctamente. Serás redirigido a tu dashboard.'
-    );
-  }, 2000); // Simula un retraso de 2 segundos
-}
+  }
+};
+
 </script>
 
 <style scoped>
@@ -312,11 +325,11 @@ const handlePayment = () => {
 .fs-title { font-size: 1.4rem; font-weight: 700; color: #0f766e; margin-bottom: 1.5rem; text-align: center; }
 input { padding: 14px; border: 1.5px solid #e5e7eb; border-radius: 10px; margin-bottom: 1rem; width: 100%; font-size: 1rem; }
 input:focus { border-color: #0f766e; box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.15); outline: none; }
-.buttons { display: flex; justify-content: center; gap: 1rem; margin-top: 1rem; }
+.buttons { display: flex; justify-content: center; gap: 1rem; margin-top: 1.5rem; }
 .action-button { background: #0f766e; color: white; border: none; padding: 12px 24px; border-radius: 10px; cursor: pointer; font-weight: 600; transition: transform 0.2s, box-shadow 0.2s; }
 .action-button:hover { transform: translateY(-2px); box-shadow: 0 6px 15px rgba(15,118,110,0.3); }
 .action-button.secondary { background: #e5e7eb; color: #374151; }
-.submit { width: 100%; background: linear-gradient(135deg, #0f766e, #0d9488); }
+.submit { min-width: 120px; background: linear-gradient(135deg, #0f766e, #0d9488); }
 .plans-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 2rem; justify-items: center; margin-top: 2rem; }
 .plan-card { background: #fff; border: 2px solid #e5e7eb; border-radius: 16px; padding: 2rem 1.5rem; text-align: center; width: 100%; max-width: 300px; position: relative; transition: all 0.3s ease; display: flex; flex-direction: column; justify-content: space-between; cursor: pointer; }
 .plan-card:hover { transform: translateY(-6px); box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08); }
@@ -339,38 +352,32 @@ input:focus { border-color: #0f766e; box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.
 .modal-box button { padding: 0.6rem 1.2rem; background: #2563eb; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; transition: background 0.3s; }
 .modal-box button:hover { background: #1d4ed8; }
 
-/* NUEVOS ESTILOS PARA EL PAGO */
 .payment-summary {
   text-align: center;
   margin-bottom: 1.5rem;
-  padding: 1rem;
+  padding: 1.5rem;
   background: #f9fafb;
   border-radius: 10px;
 }
+.redirect-message {
+    margin-top: 1rem;
+    font-style: italic;
+    color: #6b7280;
+}
 .total-amount {
-  font-size: 1.2rem;
+  font-size: 1.25rem;
   color: #0f766e;
 }
-#card-element {
-  border: 1.5px solid #e5e7eb;
-  padding: 14px;
-  border-radius: 10px;
-  margin-bottom: 1rem;
-}
-.card-details {
-  display: flex;
-  gap: 1rem;
-  margin-top: 1rem;
-}
-.card-details input {
-  margin-bottom: 0;
-}
+
 .action-button:disabled {
   background: #9ca3af;
   cursor: not-allowed;
+}
+.action-button:disabled:hover {
   transform: none;
   box-shadow: none;
 }
+
 .spinner {
   display: inline-block;
   width: 20px;

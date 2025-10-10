@@ -11,6 +11,8 @@ import Precios from '../components/precios.vue'
 import Documentacion from '../components/documentacion.vue'
 import Contacto from '../components/contacto.vue'
 import Faq from '../components/faq.vue'
+//pago
+import ConfirmacionPago from '@/components/ConfirmacionPago.vue'
 
 // Layout y Vistas Privadas (Dashboard)
 import DashboardLayout from '../components/DashboardLayout.vue'
@@ -37,6 +39,17 @@ const routes = [
 
   // --- GRUPO DE RUTAS PRIVADAS (DASHBOARD) ---
   // Estas se renderizan dentro del DashboardLayout y no muestran el layout público.
+
+  //pago
+  {
+  path: '/pago/confirmacion', // Esta es la URL que Transbank usará
+  name: 'ConfirmacionPago',
+  component: ConfirmacionPago
+  },
+
+
+  // Rutas del dashboard agrupadas bajo el layout
+
   {
     path: '/app',
     component: DashboardLayout,
@@ -63,6 +76,7 @@ const router = createRouter({
     }
     return { top: 0, behavior: 'smooth' };
   }
+  
 })
 
 /*
