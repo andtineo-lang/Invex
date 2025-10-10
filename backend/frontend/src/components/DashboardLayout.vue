@@ -1,155 +1,158 @@
 <template>
-  <div class="min-h-screen bg-green-50">
-    <nav class="bg-teal-600 shadow-lg">
-      <div class="max-w-7xl mx-auto px-4">
-        <div class="flex justify-between items-center h-16">
+  <div class="layout-container">
+    <nav class="main-nav">
+      <div class="nav-content">
+        <div class="flex-shrink-0">
           <h1 class="text-2xl font-bold text-white">INVEX</h1>
-
-          <div class="md:hidden">
-            <button 
-              @click="menuOpen = !menuOpen"
-              class="text-white hover:text-gray-200 focus:outline-none"
-            >
-              <svg v-if="!menuOpen" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-              <svg v-else class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-
-          <div class="hidden md:flex items-center space-x-4">
-            <button
-              v-for="item in navItems"
-              :key="item.name"
-              @click="navigateTo(item.path)"
-              :class="[
-                'px-4 py-2 rounded-lg text-sm font-medium transition-colors',
-                $route.path === item.path
-                  ? 'bg-white text-teal-600 shadow-md'
-                  : 'text-white hover:bg-teal-500'
-              ]"
-            >
-              {{ item.name }}
-            </button>
-
-            <div class="relative">
-              <div @click="perfilOpen = !perfilOpen" class="flex items-center space-x-2 cursor-pointer">
-                <span class="bg-white text-teal-600 font-bold rounded-full px-3 py-1">
-                  {{ user.iniciales }}
-                </span>
-                <span class="text-white font-medium hidden lg:block">{{ user.nombre }}</span>
-              </div>
-
-              <div v-if="perfilOpen" class="absolute right-0 mt-4 w-72 bg-teal-600 rounded-lg shadow-xl p-4 z-50 border border-teal-500">
-                <div class="flex items-center space-x-3">
-                  <div class="w-12 h-12 flex items-center justify-center rounded-full bg-white text-teal-600 font-bold text-xl">
-                    {{ user.iniciales }}
-                  </div>
-                  <div class="flex flex-col">
-                    <span class="text-white font-semibold text-lg">{{ user.nombre }}</span>
-                    <span class="text-sm text-teal-100 italic">{{ user.rol }}</span>
-                    <span class="text-xs text-teal-200">{{ user.correo }}</span>
-                  </div>
-                </div>
-
-                <button 
-                  @click="logout"
-                  class="w-full mt-4 bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded-lg font-medium transition"
-                >
-                  Cerrar sesión
-                </button>
-              </div>
-            </div>
-          </div>
         </div>
-      </div>
 
-      <div v-if="menuOpen" class="md:hidden bg-teal-700">
-        <div class="px-4 py-3 space-y-2">
+        <div class="hidden md:flex items-center space-x-2">
           <button
             v-for="item in navItems"
             :key="item.name"
             @click="navigateTo(item.path)"
             :class="[
-              'block w-full text-left px-4 py-2 rounded-lg text-sm font-medium transition-colors',
-              $route.path === item.path
-                ? 'bg-white text-teal-600'
-                : 'text-white hover:bg-teal-500'
+              'px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200',
+              $route.path.startsWith(item.path)
+                ? 'bg-white text-teal-600 shadow-md'
+                : 'text-white hover:bg-teal-500 hover:bg-opacity-75'
             ]"
           >
             {{ item.name }}
           </button>
+        </div>
 
-          <div class="mt-6 border-t border-teal-500 pt-4">
-            <div class="flex items-center space-x-3">
-              <div class="w-10 h-10 flex items-center justify-center rounded-full bg-white text-teal-600 font-bold">
+        <div class="flex items-center">
+          <div class="hidden md:block relative ml-4">
+            <div @click="perfilOpen = !perfilOpen" class="flex items-center space-x-2 cursor-pointer">
+              <span class="bg-white text-teal-600 font-bold rounded-full h-8 w-8 flex items-center justify-center">
                 {{ user.iniciales }}
-              </div>
-              <div class="flex flex-col">
-                <span class="text-white font-semibold">{{ user.nombre }}</span>
-                <span class="text-sm text-gray-200 italic">{{ user.rol }}</span>
-                <span class="text-xs text-gray-300">{{ user.correo }}</span>
-              </div>
+              </span>
             </div>
-
-            <button 
-              @click="logout"
-              class="w-full mt-4 bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded-lg font-medium transition"
-            >
-              Cerrar sesión
+            <transition name="fade">
+              <div v-if="perfilOpen" class="dropdown-menu">
+                <p class="px-4 py-2 text-sm text-gray-700 border-b">{{ user.nombre }}</p>
+                <a @click.prevent="logout" href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Cerrar sesión</a>
+              </div>
+            </transition>
+          </div>
+          <div class="md:hidden ml-4">
+            <button @click="menuOpen = !menuOpen" class="text-white focus:outline-none">
+              <svg v-if="!menuOpen" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7" /></svg>
+              <svg v-else class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
+          </div>
+        </div>
+      </div>
+
+      <div v-if="menuOpen" class="md:hidden mobile-menu">
+        <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3">
+          <button
+            v-for="item in navItems"
+            :key="item.name"
+            @click="navigateTo(item.path)"
+            :class="[
+              'block w-full text-left px-3 py-2 rounded-md text-base font-medium',
+              $route.path.startsWith(item.path) ? 'bg-white text-teal-600' : 'text-white hover:bg-teal-500'
+            ]">
+            {{ item.name }}
+          </button>
+        </div>
+        <div class="mobile-profile">
+          <div class="flex items-center px-5">
+            <span class="bg-white text-teal-600 font-bold rounded-full h-10 w-10 flex items-center justify-center">
+              {{ user.iniciales }}
+            </span>
+            <div class="ml-3">
+              <div class="text-base font-medium text-white">{{ user.nombre }}</div>
+              <div class="text-sm font-medium text-teal-200">{{ user.correo }}</div>
+            </div>
+          </div>
+          <div class="mt-3 px-2 space-y-1">
+            <a @click.prevent="logout" href="#" class="block px-3 py-2 rounded-md text-base font-medium text-white hover:bg-teal-500">Cerrar sesión</a>
           </div>
         </div>
       </div>
     </nav>
 
-    <main class="p-6">
+    <main class="main-content">
       <router-view />
     </main>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref } from 'vue';
+import { useRouter } from 'vue-router';
 
-const router = useRouter()
+const router = useRouter();
+const menuOpen = ref(false);
+const perfilOpen = ref(false);
 
-// Estado de menú y perfil
-const menuOpen = ref(false)
-const perfilOpen = ref(false)
-
-// Simulación usuario logueado
 const user = ref({
   iniciales: 'JP',
   nombre: 'Juan Pérez',
   rol: 'Administrador',
   correo: 'juan.perez@empresa.com'
-})
+});
 
-// Navegación 
 const navItems = [
   { name: 'Inventario', path: '/app/inventario' },
   { name: 'Importar', path: '/app/inventario/importar' },
   { name: 'Proyecciones', path: '/app/proyecciones' },
   { name: 'Reportes', path: '/app/reportes' },
   { name: 'Usuarios', path: '/app/usuarios' },
-  { name: 'Configuracion', path: '/app/configuracion' }
-]
+  { name: 'Configuración', path: '/app/configuracion' }
+];
 
 const navigateTo = (path) => {
-  menuOpen.value = false 
-  perfilOpen.value = false 
-  router.push(path)
-}
+  menuOpen.value = false;
+  router.push(path);
+};
 
 const logout = () => {
-  perfilOpen.value = false
-  // Lógica de logout: localStorage.clear(), etc.
-  router.push('/login')
-}
+  console.log('Cerrando sesión...');
+  router.push('/login');
+};
 </script>
+
+<style scoped>
+.layout-container {
+  min-height: 100vh;
+  background-color: #f1f5f9;
+}
+.main-nav {
+  background-color: #0d9488;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+.nav-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 4rem;
+  max-width: 80rem;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+.main-content {
+  padding: 2rem;
+  max-width: 80rem;
+  margin: 0 auto;
+}
+.fade-enter-active, .fade-leave-active {
+  transition: opacity 0.2s ease-in-out;
+}
+.fade-enter-from, .fade-leave-to {
+  opacity: 0;
+}
+.dropdown-menu {
+  position: absolute; right: 0; margin-top: 0.5rem; width: 12rem;
+  border-radius: 0.375rem;
+  box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
+  padding: 0.25rem 0; background-color: white; z-index: 50;
+}
+.mobile-menu { background-color: #0f766e; }
+.mobile-profile {
+  padding-top: 1rem; padding-bottom: 0.75rem; border-top: 1px solid #115e59;
+}
+</style>

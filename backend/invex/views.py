@@ -6,7 +6,7 @@ from rest_framework import viewsets, generics, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
-from .models import Empresa, UsuarioEmpresa, Producto, Stock, Suscripcion, DiaImportante
+from .models import Empresa, UsuarioEmpresa, Producto, Stock, Suscripcion, DiaImportante, Categoria # <-- 1. Importa Categoria
 from .serializers import *
 
 
@@ -110,10 +110,28 @@ class InventarioImportAPIView(APIView):
                         errores.append(f"Fila {i+1} ('{nombre_producto}'): 'stock_actual' debe ser un número.")
                         continue
                     
-                    producto, created = Producto.objects.get_or_create(
+                    # --- 2. LÓGICA DE CATEGORÍAS ACTUALIZADA ---
+                    nombre_categoria = item.get('categoria')
+                    categoria_obj = None # Por defecto, no hay categoría
+                    
+                    if nombre_categoria and nombre_categoria.strip():
+                        # Busca o crea la categoría para la empresa actual.
+                        categoria_obj, created = Categoria.objects.get_or_create(
+                            empresa=empresa,
+                            nombre__iexact=nombre_categoria.strip(), # Búsqueda insensible a mayúsculas
+                            defaults={'nombre': nombre_categoria.strip()}
+                        )
+                    # --- FIN DE LA LÓGICA DE CATEGORÍAS ---
+
+                    # Usa update_or_create para evitar duplicados y actualizar si ya existe
+                    producto, created = Producto.objects.update_or_create(
                         empresa=empresa,
-                        nombre__iexact=nombre_producto.strip(), # Búsqueda insensible a mayúsculas
-                        defaults={'nombre': nombre_producto.strip(), 'unidad_medida': item.get('unidad_medida', 'unidades')}
+                        nombre__iexact=nombre_producto.strip(),
+                        defaults={
+                            'nombre': nombre_producto.strip(),
+                            'unidad_medida': item.get('unidad_medida', 'unidades'),
+                            'categoria': categoria_obj # <-- 3. Asigna la categoría encontrada o creada
+                        }
                     )
 
                     Stock.objects.update_or_create(

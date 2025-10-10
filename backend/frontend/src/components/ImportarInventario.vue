@@ -1,113 +1,103 @@
 <template>
   <div class="import-container">
-    <h2>Importar Inventario</h2>
-    <p>Puedes subir tu inventario desde un archivo CSV o ingresarlo manualmente.</p>
+   
+      <h2>Importar Inventario</h2>
+      <p>Puedes subir tu inventario desde un archivo CSV o ingresarlo manualmente.</p>
+    
 
     <div class="mode-selector">
-      <button @click="modo = 'csv'" :class="{ active: modo === 'csv' }">Subir Archivo CSV</button>
-      <button @click="modo = 'manual'" :class="{ active: modo === 'manual' }">Ingreso Manual</button>
+      <button 
+        @click="modo = 'csv'" 
+        :class="['mode-button', { 'active': modo === 'csv' }]"
+      >
+        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+        Subir Archivo CSV
+      </button>
+      <button 
+        @click="modo = 'manual'" 
+        :class="['mode-button', { 'active': modo === 'manual' }]"
+      >
+        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+        Ingreso Manual
+      </button>
     </div>
 
-    <div v-if="modo === 'csv'" class="import-content">
-      <CsvUploader @upload-success="handleSuccess" />
-    </div>
-
-    <div v-if="modo === 'manual'" class="import-content">
-      <ManualEntry @upload-success="handleSuccess" />
+    <div class="content-wrapper">
+      <CsvUploader v-if="modo === 'csv'" @upload-success="handleSuccess" />
+      <ManualEntry v-if="modo === 'manual'" @upload-success="handleSuccess" />
     </div>
   </div>
 </template>
 
-<script>
+<script setup>
+import { ref } from 'vue';
+// import { useRouter } from 'vue-router'; // Ya no se necesita
 import CsvUploader from '@/components/CsvUploader.vue';
 import ManualEntry from '@/components/ManualEntry.vue';
 
-export default {
-  name: 'ImportarInventario',
-  components: {
-    CsvUploader,
-    ManualEntry
-  },
-  data() {
-    return {
-      modo: 'csv', // Modo inicial
-    };
-  },
-  methods: {
-    handleSuccess(message) {
-      // Mostrar una notificación de éxito al usuario
-      console.log('Éxito:', message);
-      // Aquí podrías usar una librería de notificaciones como vue-toastification
-      this.$toast.success(message);
-      // O redirigir al inventario
-      this.$router.push('/inventario');
-    }
-  }
+// const router = useRouter(); // <-- ELIMINA O COMENTA ESTA LÍNEA
+const modo = ref('csv');
+
+const handleSuccess = (message) => {
+  console.log('Éxito:', message);
+  // Si en el futuro quieres redirigir al usuario después de un éxito,
+  // puedes volver a activar el router y usarlo aquí.
+  // Por ejemplo: router.push('/app/inventario');
 };
 </script>
 
 <style scoped>
-/* Contenedor principal de la página de importación */
 .import-container {
-  max-width: 900px; /* Ajusta esto según el ancho deseado */
-  margin: 0 auto; /* Centra el contenido */
-  padding: 20px;
-  background-color: #ffffff; /* Fondo blanco para el contenido de la página */
-  border-radius: 12px;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.header {
+  text-align: center;
+  margin-bottom: 2rem;
 }
 
 h2 {
-  font-size: 1.8rem;
+  font-size: 2rem;
   font-weight: 700;
-  color: #212121; /* Color de texto oscuro */
-  margin-bottom: 0.5rem;
+  color: #1a202c;
 }
 
 p {
-  color: #555;
-  margin-bottom: 1.5rem;
-  font-size: 1rem;
+  color: #4a5568;
+  font-size: 1.1rem;
 }
 
-/* Estilos para el selector de modo (botones "Subir CSV" / "Ingreso Manual") */
 .mode-selector {
-  display: flex; /* Para que los botones estén en línea */
-  gap: 10px; /* Espacio entre los botones */
-  margin-bottom: 2rem; /* Espacio debajo del selector */
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin-bottom: 2rem;
 }
 
 .mode-button {
-  padding: 12px 25px;
-  border: 2px solid #0d9488; /* Borde verde teal */
-  border-radius: 8px; /* Bordes ligeramente redondeados */
+  display: inline-flex;
+  align-items: center;
+  padding: 0.75rem 1.5rem;
+  border: 2px solid transparent;
+  border-radius: 8px;
   cursor: pointer;
-  background-color: #e0f2f1; /* Fondo claro para los inactivos */
-  color: #0d9488; /* Texto verde teal para inactivos */
+  background-color: #f1f5f9;
+  color: #475569;
   font-weight: 600;
-  transition: all 0.3s ease; /* Transición suave */
-  font-size: 1rem;
-  white-space: nowrap; /* Evita que el texto se rompa */
+  transition: all 0.3s ease;
 }
 
 .mode-button:hover:not(.active) {
-  background-color: #b2dfdb; /* Fondo un poco más oscuro al pasar el ratón */
+  background-color: #e2e8f0;
+  color: #1e293b;
 }
 
 .mode-button.active {
-  background-color: #0d9488; /* Fondo verde teal para el activo */
-  color: white; /* Texto blanco para el activo */
-  box-shadow: 0 4px 8px rgba(13, 148, 136, 0.3); /* Sombra para el activo */
-  transform: translateY(-2px); /* Pequeño efecto de elevación */
-}
-
-/* Estilos para el contenido de importación (el cuadro dashed) */
-.import-content {
-  margin-top: 20px;
-  padding: 30px;
-  border: 2px dashed #b2dfdb; /* Borde dashed más integrado */
-  border-radius: 10px;
-  background-color: #f5fdfd; /* Fondo muy claro */
-  text-align: center; /* Centrar el contenido dentro de la caja */
+  background-color: #f0fdfa;
+  color: #0d9488;
+  border-color: #0d9488;
+  box-shadow: 0 4px 10px rgba(13, 148, 136, 0.2);
+  transform: translateY(-2px);
 }
 </style>
