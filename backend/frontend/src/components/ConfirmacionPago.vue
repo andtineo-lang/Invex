@@ -19,7 +19,8 @@
           <p><strong>Fecha de Transacción:</strong> {{ formatDate(paymentResult.transaction_date) }}</p>
           <p><strong>Últimos 4 dígitos:</strong> **** {{ paymentResult.card_detail.card_number }}</p>
         </div>
-        <router-link to="/inventario">
+        <!-- CORREGIDO: La ruta al inventario es anidada, la ruta completa es /app/inventario -->
+        <router-link to="/app/inventario">
           <button class="action-button">Ir al Dashboard</button>
         </router-link>
       </template>
@@ -38,7 +39,7 @@
       <template v-else>
         <div class="icon error">✖</div>
         <h2 class="error-text">Pago Rechazado</h2>
-         <div class="details">
+          <div class="details">
           <p><strong>Monto:</strong> ${{ formatAmount(paymentResult.amount) }}</p>
           <p><strong>Orden de Compra:</strong> {{ paymentResult.buy_order }}</p>
           <p><strong>Respuesta:</strong> {{ paymentResult.response_code === -1 ? 'Rechazado por el banco' : 'Transacción fallida' }}</p>
@@ -222,4 +223,3 @@ h2 {
    box-shadow: 0 6px 15px rgba(107,114,128,0.3);
 }
 </style>
-
