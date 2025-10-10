@@ -4,7 +4,9 @@
     <Header v-if="showLayout" />
 
     <!-- Aquí se renderiza cada página -->
-    <router-view />
+      <main>
+      <router-view />
+    </main>
 
     <!-- Footer condicional: solo se muestra en algunas rutas -->
     <Footer v-if="showLayout" />
@@ -20,10 +22,17 @@ import { useRoute } from 'vue-router'
 const route = useRoute()
 
 // Define en qué rutas NO quieres mostrar Header y Footer
-const routesWithoutLayout = ['/proyecciones', '/inventario', '/configuracion', '/usuarios', '/reportes', '/dashboard']
-
-// Computed que verifica si la ruta actual debe mostrar el layout
+const routesWithoutLayout = [
+  '/app/inventario',
+  '/app/inventario/importar',
+  '/app/proyecciones',
+  '/app/reportes',
+  '/app/usuarios',
+  '/app/configuracion'
+]
+// --- 3. Lógica reactivada para que funcione el v-if ---
 const showLayout = computed(() => {
+  // Si la ruta actual NO está en la lista, muestra el layout.
   return !routesWithoutLayout.includes(route.path)
 })
 </script>

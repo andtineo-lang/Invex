@@ -3,6 +3,7 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .api import CustomAuthToken 
+from .views import InventarioImportAPIView
 from .views import *
 
 # --------------------------
@@ -28,4 +29,7 @@ urlpatterns = [
     
     # 3. Rutas de la API (CRUD)
     path('', include(router.urls)),
+
+    path('api/empresas/<int:empresa_id>/importar-inventario/', InventarioImportAPIView.as_view(), name='importar-inventario'),
+    
 ]

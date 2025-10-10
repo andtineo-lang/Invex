@@ -64,53 +64,51 @@
         </div>
       </div>
 
-     <!-- Menú en móvil -->
-<div v-if="menuOpen" class="md:hidden bg-teal-700">
-  <div class="px-4 py-3 space-y-2">
-    <!-- Links de navegación -->
-    <button
-      v-for="item in navItems"
-      :key="item.name"
-      @click="navigateTo(item.path)"
-      :class="[
-        'block w-full text-left px-4 py-2 rounded-lg text-sm font-medium transition-colors',
-        $route.path === item.path
-          ? 'bg-white text-teal-600'
-          : 'text-white hover:bg-teal-500'
-      ]"
-    >
-      {{ item.name }}
-    </button>
+      <!-- Menú en móvil -->
+      <div v-if="menuOpen" class="md:hidden bg-teal-700">
+        <div class="px-4 py-3 space-y-2">
+          <!-- Links de navegación -->
+          <button
+            v-for="item in navItems"
+            :key="item.name"
+            @click="navigateTo(item.path)"
+            :class="[
+              'block w-full text-left px-4 py-2 rounded-lg text-sm font-medium transition-colors',
+              $route.path === item.path
+                ? 'bg-white text-teal-600'
+                : 'text-white hover:bg-teal-500'
+            ]"
+          >
+            {{ item.name }}
+          </button>
 
-    <!-- Zona de perfil en el menú responsive -->
-<div class="mt-6 border-t border-teal-500 pt-4">
-  <div class="flex items-center space-x-3">
-    <!-- Avatar con iniciales -->
-    <div class="w-10 h-10 flex items-center justify-center rounded-full bg-teal-700 text-white font-bold">
-      {{ user.iniciales }}
-    </div>
-    <div class="flex flex-col">
-      <!-- Nombre -->
-      <span class="text-white font-semibold">{{ user.nombre }}</span>
-      <!-- Rol -->
-      <span class="text-sm text-gray-200 italic">{{ user.rol }}</span>
-      <!-- Correo (opcional) -->
-      <span class="text-xs text-gray-300">{{ user.correo }}</span>
-    </div>
-  </div>
+          <!-- Zona de perfil en el menú responsive -->
+          <div class="mt-6 border-t border-teal-500 pt-4">
+            <div class="flex items-center space-x-3">
+              <!-- Avatar con iniciales -->
+              <div class="w-10 h-10 flex items-center justify-center rounded-full bg-white text-teal-600 font-bold">
+                {{ user.iniciales }}
+              </div>
+              <div class="flex flex-col">
+                <!-- Nombre -->
+                <span class="text-white font-semibold">{{ user.nombre }}</span>
+                <!-- Rol -->
+                <span class="text-sm text-gray-200 italic">{{ user.rol }}</span>
+                <!-- Correo (opcional) -->
+                <span class="text-xs text-gray-300">{{ user.correo }}</span>
+              </div>
+            </div>
 
-  <!-- Botón cerrar sesión -->
-  <button 
-    @click="cerrarSesion"
-    class="w-full mt-4 bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded-lg font-medium transition"
-  >
-    Cerrar sesión
-  </button>
-</div>
-
-  </div>
-</div>
-
+            <!-- Botón cerrar sesión -->
+            <button 
+              @click="logout"
+              class="w-full mt-4 bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded-lg font-medium transition"
+            >
+              Cerrar sesión
+            </button>
+          </div>
+        </div>
+      </div>
     </nav>
 
     <!-- Aquí va el contenido dinámico -->
@@ -126,7 +124,6 @@ import { useRouter } from 'vue-router'
 
 const router = useRouter()
 
-
 // Estado de menú y perfil
 const menuOpen = ref(false)
 const perfilOpen = ref(false)
@@ -139,27 +136,25 @@ const user = ref({
   correo: 'juan.perez@empresa.com'
 })
 
-const cerrarSesion = () => {
-  alert('Cerrando sesión...')
-  // Aquí limpias token y rediriges a login
-}
-
-// Navegación
+// --- CAMBIO AQUÍ ---
+// Navegación (se añadió el prefijo /app a todas las rutas)
 const navItems = [
-  { name: 'Inventario', path: '/inventario' },
-  { name: 'Proyecciones', path: '/proyecciones' },
-  { name: 'Reportes', path: '/reportes' },
-  { name: 'Usuarios', path: '/usuarios' },
-  { name: 'Configuración', path: '/configuracion' }
+  { name: 'Inventario', path: '/app/inventario' },
+  { name: 'Importar', path: '/app/inventario/importar' },
+  { name: 'Proyecciones', path: '/app/proyecciones' },
+  { name: 'Reportes', path: '/app/reportes' },
+  { name: 'Usuarios', path: '/app/usuarios' },
+  { name: 'Configuracion', path: '/app/configuracion' }
 ]
 
 const navigateTo = (path) => {
-  menuOpen.value = false
+  menuOpen.value = false // Cierra el menú móvil al navegar
+  perfilOpen.value = false // Cierra el menú de perfil
   router.push(path)
 }
 
 const logout = () => {
-  alert('Cerrando sesión...')
+  perfilOpen.value = false
   // Aquí pondrías: localStorage.clear(), API logout, etc.
   router.push('/login')
 }
