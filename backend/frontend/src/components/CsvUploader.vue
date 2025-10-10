@@ -1,80 +1,107 @@
 <template>
-  <div>
-    <h4>Subir mediante archivo CSV</h4>
-    <p class="instrucciones">Sube tu archivo de inventario y te ayudaremos a mapear las columnas para que coincidan con nuestro sistema.</p>
-
-    <div v-if="step === 'initial'" class="file-input-wrapper">
-      <input type="file" @change="handleFileChange" accept=".csv" ref="fileInput" class="hidden">
-      <button @click="$refs.fileInput.click()" class="btn-file-select">
-        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-        Seleccionar archivo CSV
-      </button>
+  <div class="import-component">
+    <div v-if="loading" class="loading-overlay">
+      <div class="spinner"></div>
+      <p>Procesando, por favor espera...</p>
     </div>
-
-    <div v-if="step === 'mapping'" class="mapping-container">
-      <h5 class="step-title">Asocia tus columnas</h5>
-      <p class="step-description">Indícanos qué columna de tu archivo CSV corresponde a cada campo requerido.</p>
-
-      <div class="mapping-fields">
-        <div class="field-map">
-          <label for="map-nombre">Nombre del Producto <strong>(Requerido)</strong></label>
-          <select id="map-nombre" v-model="columnMap.nombre">
-            <option disabled value="">Selecciona una columna de tu archivo...</option>
-            <option v-for="header in csvHeaders" :key="header" :value="header">
-              {{ header }}
-            </option>
-          </select>
-        </div>
-
-        <div class="field-map">
-          <label for="map-stock">Stock Actual <strong>(Requerido)</strong></label>
-          <select id="map-stock" v-model="columnMap.stock_actual">
-            <option disabled value="">Selecciona una columna de tu archivo...</option>
-            <option v-for="header in csvHeaders" :key="header" :value="header">
-              {{ header }}
-            </option>
-          </select>
-        </div>
-      </div>
-
-      <div class="action-buttons">
-        <button @click="goToPreview" class="btn-confirm-import">Continuar a Previsualización</button>
-        <button @click="resetFlow" class="btn-secondary">Cancelar</button>
-      </div>
-    </div>
-
-    <div v-if="step === 'preview'" class="preview-container">
-      <h5 class="step-title">Previsualiza y Confirma</h5>
-      <p class="step-description">Revisa que los datos se hayan interpretado correctamente. Solo se muestran las primeras 10 filas.</p>
-      
-      <div class="table-responsive">
-        <table class="preview-table">
-          <thead>
-            <tr>
-              <th>Nombre del Producto (Mapeado)</th>
-              <th>Stock Actual (Mapeado)</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="(row, index) in processedData.slice(0, 10)" :key="index">
-              <td>{{ row.nombre }}</td>
-              <td>{{ row.stock_actual }}</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <div class="action-buttons">
-        <button @click="submitFile" :disabled="loading" class="btn-confirm-import">
-          {{ loading ? 'Importando...' : `Confirmar e Importar ${processedData.length} productos` }}
-        </button>
-        <button @click="step = 'mapping'" class="btn-secondary">Volver a Mapear</button>
-      </div>
-    </div>
-
+    
     <div v-if="error" class="error-message">{{ error }}</div>
-    <div v-if="loading" class="loading-message">Procesando, por favor espera...</div>
 
+    <Transition name="fade" mode="out-in">
+      
+      <div v-if="step === 'initial'" key="initial" class="step-container">
+        <h4>Subir mediante archivo CSV</h4>
+        <p class="instrucciones">Sube tu archivo de inventario. Intentaremos mapear las columnas automáticamente.</p>
+        
+        <div 
+          class="drop-zone" 
+          @click="$refs.fileInput.click()"
+          @dragover.prevent
+          @drop.prevent="handleDrop"
+          @dragenter.prevent="$event.target.classList.add('drag-over')"
+          @dragleave.prevent="$event.target.classList.remove('drag-over')"
+        >
+          <input type="file" @change="handleFileChange" accept=".csv" ref="fileInput" class="hidden">
+          <svg class="upload-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+          <p class="font-semibold text-gray-700">Haz clic para seleccionar un archivo</p>
+          <p class="text-sm text-gray-500">o **arrástralo aquí** (CSV)</p>
+        </div>
+      </div>
+
+      <div v-else-if="step === 'mapping'" key="mapping" class="mapping-container">
+        <h5 class="step-title">Mapeo Necesario</h5>
+        <p class="step-description">No pudimos asociar automáticamente todos los campos requeridos. Por favor, selecciona las columnas.</p>
+
+        <div class="mapping-fields">
+          <div class="field-map">
+            <label for="map-nombre">Nombre del Producto <strong>(Requerido)</strong></label>
+            <select id="map-nombre" v-model="columnMap.nombre">
+              <option disabled value="">Selecciona una columna de tu archivo...</option>
+              <option v-for="header in csvHeaders" :key="header" :value="header">
+                {{ header }}
+              </option>
+            </select>
+          </div>
+
+          <div class="field-map">
+            <label for="map-stock">Stock Actual <strong>(Requerido)</strong></label>
+            <select id="map-stock" v-model="columnMap.stock_actual">
+              <option disabled value="">Selecciona una columna de tu archivo...</option>
+              <option v-for="header in csvHeaders" :key="header" :value="header">
+                {{ header }}
+              </option>
+            </select>
+          </div>
+
+          <div class="field-map">
+            <label for="map-categoria">Categoría (Opcional)</label>
+            <select id="map-categoria" v-model="columnMap.categoria">
+              <option value="">Omitir esta columna</option>
+              <option v-for="header in csvHeaders" :key="header" :value="header">
+                {{ header }}
+              </option>
+            </select>
+          </div>
+        </div>
+
+        <div class="action-buttons">
+          <button @click="goToPreview" class="btn-confirm-import">Continuar a Previsualización</button>
+          <button @click="resetFlow(true)" class="btn-secondary">Cancelar</button>
+        </div>
+      </div>
+      
+      <div v-else-if="step === 'preview'" key="preview" class="step-container">
+        <h5 class="step-title">Previsualiza y Confirma</h5>
+        <p class="step-description">Revisa que los datos se hayan interpretado correctamente. Solo se muestran las primeras 10 filas.</p>
+        
+        <div class="table-responsive">
+          <table class="preview-table">
+            <thead>
+              <tr>
+                <th>Nombre del Producto (Mapeado)</th>
+                <th>Stock Actual (Mapeado)</th>
+                <th>Categoría (Mapeado)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="(row, index) in processedData.slice(0, 10)" :key="index">
+                <td>{{ row.nombre || 'N/A' }}</td>
+                <td>{{ row.stock_actual || '0' }}</td>
+                <td>{{ row.categoria || 'N/A' }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="action-buttons">
+          <button @click="submitFile" :disabled="loading" class="btn-confirm-import">
+            {{ loading ? 'Importando...' : `Confirmar e Importar ${processedData.length} productos` }}
+          </button>
+          <button @click="step = 'mapping'" class="btn-secondary">Volver a Mapear</button>
+        </div>
+      </div>
+
+    </Transition>
   </div>
 </template>
 
@@ -85,38 +112,64 @@ import axios from 'axios';
 
 const emit = defineEmits(['upload-success']);
 
+// ----------------------------------------------------
 // ESTADO DEL COMPONENTE
+// ----------------------------------------------------
 const selectedFile = ref(null);
 const error = ref('');
 const loading = ref(false);
 
-// Estado para el flujo de mapeo
 const step = ref('initial'); // 'initial' -> 'mapping' -> 'preview'
 const csvHeaders = ref([]);
 const originalData = ref([]);
 const columnMap = ref({
   nombre: '',
   stock_actual: '',
+  categoria: '', // Nuevo campo opcional
 });
 
-// Transforma los datos originales según el mapeo del usuario
+// Palabras clave que el sistema buscará para el mapeo automático
+const MAPPING_KEYWORDS = {
+  nombre: ['nombre', 'producto', 'item', 'descripcion'],
+  stock_actual: ['stock', 'cantidad', 'inventario', 'unidades'],
+  categoria: ['categoria', 'tipo', 'clase', 'familia'],
+};
+
+// ----------------------------------------------------
+// PROPIEDADES COMPUTADAS
+// ----------------------------------------------------
 const processedData = computed(() => {
-  if (originalData.value.length === 0 || !columnMap.value.nombre || !columnMap.value.stock_actual) {
+  if (originalData.value.length === 0) return [];
+  
+  // Aseguramos que los campos requeridos estén mapeados
+  if (!columnMap.value.nombre || !columnMap.value.stock_actual) {
     return [];
   }
+
+  // Mapeamos los datos originales a la estructura de destino
   return originalData.value.map(row => ({
     nombre: row[columnMap.value.nombre],
     stock_actual: row[columnMap.value.stock_actual],
+    categoria: columnMap.value.categoria ? row[columnMap.value.categoria] : null,
   }));
 });
 
-// MÉTODOS
-const handleFileChange = (event) => {
-  selectedFile.value = event.target.files[0];
+// ----------------------------------------------------
+// MÉTODOS DE MANEJO DE ARCHIVOS
+// ----------------------------------------------------
+
+/**
+ * Lógica para manejar la carga de archivos (desde input o drop).
+ * @param {File} file - El archivo CSV a procesar.
+ */
+const processFile = (file) => {
+  selectedFile.value = file;
   if (!selectedFile.value) return;
 
-  resetFlow(false); // Reinicia sin borrar el archivo seleccionado
+  // Limpieza inicial
+  resetFlow(false); 
   loading.value = true;
+  error.value = '';
 
   Papa.parse(selectedFile.value, {
     header: true,
@@ -124,16 +177,81 @@ const handleFileChange = (event) => {
     complete: (results) => {
       loading.value = false;
       if (results.errors.length) {
-        error.value = 'Error al leer el archivo. Asegúrate de que es un CSV con encabezados.';
+        error.value = 'Error al leer el archivo. Asegúrate de que es un CSV válido con encabezados.';
         step.value = 'initial';
         return;
       }
+      
       csvHeaders.value = results.meta.fields;
       originalData.value = results.data;
-      step.value = 'mapping';
+      
+      // Intentar mapear automáticamente
+      autoMapColumns();
+      
+      // Verificar si los campos requeridos se mapearon
+      if (columnMap.value.nombre && columnMap.value.stock_actual) {
+        step.value = 'preview'; // Éxito en el mapeo, saltar a previsualización
+      } else {
+        // Falla el mapeo, ir al paso manual
+        error.value = "No se pudo mapear automáticamente. Por favor, asocia las columnas.";
+        step.value = 'mapping';
+      }
+    },
+    error: (err) => {
+      loading.value = false;
+      error.value = 'Ocurrió un error al analizar el CSV: ' + err.message;
+      step.value = 'initial';
     }
   });
 };
+
+const handleFileChange = (event) => {
+  const file = event.target.files[0];
+  if (file) {
+    processFile(file);
+  }
+};
+
+const handleDrop = (event) => {
+  event.target.classList.remove('drag-over'); // Remover clase visual de arrastre
+  const files = event.dataTransfer.files;
+  if (files.length > 0 && files[0].name.toLowerCase().endsWith('.csv')) {
+    processFile(files[0]);
+  } else if (files.length > 0) {
+     error.value = "Solo se permite la carga de archivos CSV.";
+  }
+};
+
+/**
+ * Intenta automáticamente mapear las columnas basándose en palabras clave.
+ */
+const autoMapColumns = () => {
+  // Reiniciar el mapa
+  columnMap.value = { nombre: '', stock_actual: '', categoria: '' };
+  const headers = csvHeaders.value.map(h => h.toLowerCase().trim().replace(/[^a-z0-9]/g, ''));
+
+  for (const systemField in MAPPING_KEYWORDS) {
+    const keywords = MAPPING_KEYWORDS[systemField];
+    for (let i = 0; i < headers.length; i++) {
+      const originalHeader = csvHeaders.value[i];
+      const normalizedHeader = headers[i];
+
+      // Busca coincidencia exacta o si la palabra clave está contenida
+      if (keywords.some(kw => normalizedHeader === kw || normalizedHeader.includes(kw))) {
+        // Si no está mapeado aún (para evitar sobrescribir si hay múltiples coincidencias)
+        if (!Object.values(columnMap.value).includes(originalHeader)) {
+          columnMap.value[systemField] = originalHeader;
+          break; // Mapeo encontrado, pasa al siguiente campo del sistema
+        }
+      }
+    }
+  }
+};
+
+
+// ----------------------------------------------------
+// MÉTODOS DE FLUJO
+// ----------------------------------------------------
 
 const goToPreview = () => {
   if (!columnMap.value.nombre || !columnMap.value.stock_actual) {
@@ -146,34 +264,40 @@ const goToPreview = () => {
 
 const submitFile = async () => {
   if (processedData.value.length === 0) {
-    error.value = "No hay datos para importar.";
+    error.value = "No hay datos válidos para importar.";
     return;
   }
   loading.value = true;
   error.value = '';
   
-  const empresaId = 1; // Reemplazar con el ID real de la empresa
-
+  const empresaId = 1; // **IMPORTANTE**: Reemplazar con el ID real de la empresa
+  
   try {
+    // La API recibe los datos ya limpios y mapeados
     const response = await axios.post(`/api/empresas/${empresaId}/importar-inventario/`, processedData.value);
     emit('upload-success', response.data.mensaje);
-    resetFlow(true); // Reinicia todo el flujo
+    resetFlow(true);
   } catch (err) {
-    error.value = err.response?.data?.detalles?.join(', ') || err.response?.data?.error || 'Ocurrió un error inesperado al importar.';
+    // Manejo de errores de la API
+    const apiError = err.response?.data?.detalles?.join(', ') || err.response?.data?.error || 'Ocurrió un error inesperado al importar.';
+    error.value = `Error de importación: ${apiError}`;
+    // No reiniciar el flujo para que el usuario pueda intentar corregir o volver a mapear
   } finally {
     loading.value = false;
   }
 };
 
 const resetFlow = (clearFile = true) => {
-  if (clearFile) {
+  if (clearFile && selectedFile.value && ref('fileInput').value) {
+    // Limpiar el input file si se está en el navegador
+    ref('fileInput').value.value = ''; 
     selectedFile.value = null;
   }
   step.value = 'initial';
   error.value = '';
   csvHeaders.value = [];
   originalData.value = [];
-  columnMap.value = { nombre: '', stock_actual: '' };
+  columnMap.value = { nombre: '', stock_actual: '', categoria: '' };
 };
 </script>
 

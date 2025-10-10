@@ -1,14 +1,15 @@
 # invex/views.py
-
+import csv
+import io
+from django.db import transaction
+from django.contrib.auth import get_user_model
 from rest_framework import viewsets, generics, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated 
-from django.contrib.auth import get_user_model
-
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from .models import Empresa, UsuarioEmpresa, Producto, Stock, Suscripcion, DiaImportante
+from .models import Empresa, UsuarioEmpresa, Producto, Stock, Suscripcion, DiaImportante, Categoria
 from .serializers import *
 
 Usuario = get_user_model()
@@ -19,9 +20,6 @@ Usuario = get_user_model()
 # ----------------------------------------------------
 
 class CustomLoginView(APIView):
-    """
-    Vista de login que requiere email, password y nombre de la empresa.
-    """
     permission_classes = [AllowAny]
 
     def post(self, request, *args, **kwargs):
@@ -38,16 +36,10 @@ class CustomLoginView(APIView):
         try:
             user = Usuario.objects.get(email=email)
         except Usuario.DoesNotExist:
-            return Response(
-                {"detail": "Credenciales inválidas."},
-                status=status.HTTP_401_UNAUTHORIZED
-            )
+            return Response({"detail": "Credenciales inválidas."}, status=status.HTTP_401_UNAUTHORIZED)
 
         if not user.check_password(password):
-            return Response(
-                {"detail": "Credenciales inválidas."},
-                status=status.HTTP_401_UNAUTHORIZED
-            )
+            return Response({"detail": "Credenciales inválidas."}, status=status.HTTP_401_UNAUTHORIZED)
 
         try:
             relacion = user.relaciones.get(empresa__nombre=empresa_nombre)
@@ -67,9 +59,6 @@ class CustomLoginView(APIView):
 
 
 class RegistroView(generics.CreateAPIView):
-    """
-    Vista para el registro de nuevos usuarios y creación inicial de una empresa.
-    """
     serializer_class = RegistroSerializer
     permission_classes = [AllowAny]
 
@@ -87,16 +76,89 @@ class RegistroView(generics.CreateAPIView):
 
 
 class CurrentUserView(APIView):
-    """
-    Vista para obtener los datos del usuario actualmente autenticado.
-    Responde a la petición de DashboardLayout.vue.
-    """
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        # DRF se encarga de obtener el usuario a través del token
         serializer = UsuarioSerializer(request.user)
         return Response(serializer.data)
+
+
+# ----------------------------------------------------
+# VISTA DE ACCIÓN PARA IMPORTAR INVENTARIO
+# ----------------------------------------------------
+
+class InventarioImportAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, empresa_id):
+        user = request.user
+        empresas_del_usuario = UsuarioEmpresa.objects.filter(usuario=user).values_list('empresa_id', flat=True)
+        if empresa_id not in empresas_del_usuario:
+            return Response({"error": "No tienes permiso para acceder a esta empresa."}, status=status.HTTP_403_FORBIDDEN)
+        
+        try:
+            empresa = Empresa.objects.get(pk=empresa_id)
+        except Empresa.DoesNotExist:
+            return Response({"error": "Empresa no encontrada."}, status=status.HTTP_404_NOT_FOUND)
+
+        data = request.data
+        if not isinstance(data, list) or not data:
+            return Response({"error": "Los datos deben ser una lista de productos."}, status=status.HTTP_400_BAD_REQUEST)
+        
+        return self._procesar_json(data, empresa)
+
+    def _procesar_json(self, productos_data, empresa):
+        errores = []
+        productos_procesados = 0
+        try:
+            with transaction.atomic():
+                for i, item in enumerate(productos_data):
+                    nombre_producto = item.get('nombre')
+                    if not nombre_producto:
+                        errores.append(f"Fila {i+1}: El nombre del producto es obligatorio.")
+                        continue
+                    
+                    nombre_categoria = item.get('categoria')
+                    categoria_obj = None
+                    if nombre_categoria and nombre_categoria.strip():
+                        categoria_obj, _ = Categoria.objects.get_or_create(
+                            empresa=empresa,
+                            nombre__iexact=nombre_categoria.strip(),
+                            defaults={'nombre': nombre_categoria.strip()}
+                        )
+
+                    producto, _ = Producto.objects.update_or_create(
+                        empresa=empresa,
+                        nombre__iexact=nombre_producto.strip(),
+                        defaults={
+                            'nombre': nombre_producto.strip(),
+                            'unidad_medida': item.get('unidad_medida', 'unidades'),
+                            'categoria': categoria_obj
+                        }
+                    )
+
+                    Stock.objects.update_or_create(
+                        producto=producto,
+                        defaults={
+                            'stock_actual': int(item.get('stock_actual', 0) or 0),
+                            'stock_transito': int(item.get('stock_transito', 0) or 0),
+                            'ventas_proyectadas': int(item.get('ventas_proyectadas', 0) or 0),
+                        }
+                    )
+                    productos_procesados += 1
+                
+                if errores:
+                    raise ValueError("Se encontraron errores de validación.")
+
+        except (ValueError, Exception) as e:
+            return Response({
+                "error": "No se pudo completar la importación.",
+                "detalles": errores if errores else [str(e)]
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response({
+            "mensaje": f"Se importaron y/o actualizaron {productos_procesados} productos exitosamente."
+        }, status=status.HTTP_201_CREATED)
 
 
 # ----------------------------------------------------
@@ -104,7 +166,6 @@ class CurrentUserView(APIView):
 # ----------------------------------------------------
 
 def get_user_companies_ids(user):
-    """ Retorna una lista de IDs de las empresas a las que pertenece el usuario. """
     return UsuarioEmpresa.objects.filter(usuario=user).values_list('empresa_id', flat=True)
 
 
@@ -122,8 +183,7 @@ class EmpresaViewSet(viewsets.ModelViewSet):
         return Empresa.objects.filter(id__in=empresas_ids)
     
     def perform_create(self, serializer):
-        empresa = serializer.save() # Guardamos la empresa primero
-        # Creamos la relación entre el usuario y la nueva empresa con rol de admin
+        empresa = serializer.save()
         UsuarioEmpresa.objects.create(usuario=self.request.user, empresa=empresa, rol='admin')
 
 
