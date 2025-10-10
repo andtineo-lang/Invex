@@ -8,13 +8,15 @@
     "lint": "vue-cli-service lint"
   },
   "dependencies": {
+    "apexcharts": "^5.3.5",
     "axios": "^1.12.2",
     "core-js": "^3.8.3",
     "gsap": "^3.13.0",
     "lucide-vue-next": "^0.544.0",
     "papaparse": "^5.5.3",
     "vue": "^3.2.13",
-    "vue-router": "^4.5.1"
+    "vue-router": "^4.5.1",
+    "vue3-apexcharts": "^1.8.0"
   },
   "devDependencies": {
     "@babel/core": "^7.12.16",
@@ -44,15 +46,12 @@
     "rules": {
       "vue/multi-word-component-names": "off"
     },
-    
     "globals": {
       "defineProps": "readonly",
       "defineEmits": "readonly",
       "defineExpose": "readonly",
       "withDefaults": "readonly"
     }
-
-    
   },
   "browserslist": [
     "> 1%",
