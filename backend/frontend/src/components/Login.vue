@@ -1,12 +1,9 @@
 <template> 
   <div class="invex-landing">
-    <!-- Header -->
     <Header />
 
-    <!-- Main -->
     <main class="main-content">
       <div class="login-container">
-        <!-- Columna izquierda con branding -->
         <div class="login-left">
           <h2>🚀 Bienvenido a INVEX</h2>
           <p>La forma más inteligente de gestionar tu inventario.</p>
@@ -17,7 +14,6 @@
           </ul>
         </div>
 
-        <!-- Columna derecha con formulario -->
         <div class="login-right">
           <form id="msform" @submit.prevent="handleLogin">
             <fieldset>
@@ -30,15 +26,13 @@
                 required 
               />
 
-              <!--campo Empresa -->
               <input 
                 type="text" 
                 v-model="loginForm.empresa" 
-                placeholder="Empresa" 
+                placeholder="Nombre de la Empresa" 
                 required 
               />
 
-              <!-- Campo contraseña con icono -->
               <div class="password-container">
                 <input 
                   :type="showPassword ? 'text' : 'password'" 
@@ -59,6 +53,7 @@
               <p class="fs-subtitle">
                 ¿No tienes cuenta? 
                 <router-link to="/registro">Crear cuenta</router-link>
+                <br>
                 ¿Olvidaste tu contraseña?
                 <router-link to="/recuperar-password">Recupérala aquí</router-link>
               </p>
@@ -68,7 +63,6 @@
       </div>
     </main>
 
-    <!-- ✅ Modal -->
     <div v-if="showModal" class="modal-overlay">
       <div class="modal-box">
         <h2>{{ modalTitle }}</h2>
@@ -82,6 +76,10 @@
 <script setup>
 import Header from '@/components/Header.vue'
 import { reactive, ref } from 'vue'
+import axios from 'axios'
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
 
 const loginForm = reactive({
   email: '',
@@ -89,37 +87,59 @@ const loginForm = reactive({
   password: ''
 })
 
-// 👁️ Control para mostrar/ocultar la contraseña
 const showPassword = ref(false)
 
-// Modal
+// Lógica del Modal (sin cambios)
 const showModal = ref(false)
 const modalTitle = ref('')
 const modalMessage = ref('')
-
 const openModal = (title, message) => {
   modalTitle.value = title
   modalMessage.value = message
   showModal.value = true
 }
 
-const validarPassword = (password) => {
-  const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[^A-Za-z0-9]).{8,}$/
-  return regex.test(password)
-}
-
-const handleLogin = () => {
+const handleLogin = async () => {
+  // Validación para los tres campos
   if (!loginForm.email || !loginForm.password || !loginForm.empresa) {
-    openModal('⚠️ Campos incompletos', 'Por favor completa todos los campos')
+    openModal('⚠️ Campos incompletos', 'Por favor completa todos los campos.')
     return
   }
 
-  if (!validarPassword(loginForm.password)) {
-    openModal('🔐 Contraseña inválida', 'Debe tener mínimo 8 caracteres, al menos 1 mayúscula, 1 minúscula y 1 carácter especial.')
-    return
-  }
+  try {
+    const response = await axios.post('http://127.0.0.1:8000/api/auth/login/', {
+      email: loginForm.email,
+      password: loginForm.password,
+      empresa: loginForm.empresa
+    })
 
-  openModal('✅ Bienvenido', `Inicio de sesión correcto para ${loginForm.email} en la empresa ${loginForm.empresa}`)
+    // --- ✅ INICIO DE LA CORRECCIÓN ---
+
+    // 1. Capturamos tanto el token como el rol de la respuesta del backend
+    const token = response.data.access;
+    const rol = response.data.rol; 
+
+    // 2. Guardamos AMBOS datos en localStorage para que el router los pueda usar
+    localStorage.setItem('authToken', token);
+    localStorage.setItem('userRole', rol); // <-- ¡ESTA ES LA LÍNEA CLAVE!
+
+    // --- FIN DE LA CORRECCIÓN ---
+
+    // Configuramos axios para que envíe el token en las siguientes peticiones
+    axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    
+    // Redirigimos al dashboard
+    router.push('/dashboard'); 
+    
+  } catch (error) {
+    // Manejo de errores mejorado para más claridad
+    if (error.response && error.response.data) {
+      openModal('❌ Error de Autenticación', error.response.data.detail || 'Los datos proporcionados son incorrectos.');
+    } else {
+      openModal('🔌 Error de Conexión', 'No se pudo conectar con el servidor. Asegúrate de que esté funcionando.');
+    }
+    console.error('Error en el login:', error);
+  }
 }
 </script>
 

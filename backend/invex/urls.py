@@ -1,31 +1,31 @@
-# invex/urls.py (ACTUALIZADO)
-
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .api import CustomAuthToken 
-from .views import *
+from .views import (
+    RegistroView, 
+    CustomLoginView,
+    CurrentUserView,  # <--- SE AÑADE LA VISTA DEL PERFIL
+    EmpresaViewSet, 
+    ProductoViewSet, 
+    StockViewSet, 
+    SuscripcionViewSet, 
+    DiaImportanteViewSet
+)
 
-# --------------------------
-# Router para ViewSets (CRUD)
-# --------------------------
+# Router para ViewSets (operaciones CRUD)
 router = DefaultRouter()
-# AÑADIR BASENAME a cada registro para evitar el AssertionError
-router.register('empresas', EmpresaViewSet, basename='empresa')
-router.register('productos', ProductoViewSet, basename='producto')
-router.register('stock', StockViewSet, basename='stock')
-router.register('suscripciones', SuscripcionViewSet, basename='suscripcion')
-router.register('dias-importantes', DiaImportanteViewSet, basename='dia-importante')
+router.register(r'empresas', EmpresaViewSet, basename='empresa')
+router.register(r'productos', ProductoViewSet, basename='producto')
+router.register(r'stock', StockViewSet, basename='stock')
+router.register(r'suscripciones', SuscripcionViewSet, basename='suscripcion')
+router.register(r'dias-importantes', DiaImportanteViewSet, basename='dia-importante')
 
-# --------------------------
-# Definición de URLs
-# --------------------------
+# Definición de URLs de la API
 urlpatterns = [
-    # 1. Ruta de Registro
+    # Rutas de autenticación y perfil
     path('auth/registro/', RegistroView.as_view(), name='registro'),
+    path('auth/login/', CustomLoginView.as_view(), name='custom-login'),
+    path('users/me/', CurrentUserView.as_view(), name='current-user'), # <--- SE AÑADE LA RUTA
     
-    # 2. RUTA DE LOGIN ACTUALIZADA
-    path('auth/login/', CustomAuthToken.as_view(), name='login-token'),
-    
-    # 3. Rutas de la API (CRUD)
+    # Rutas CRUD gestionadas por el router
     path('', include(router.urls)),
 ]

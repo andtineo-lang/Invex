@@ -113,21 +113,20 @@ AUTH_USER_MODEL = 'invex.Usuario'
 # NUEVAS CONFIGURACIONES DE DRF y CORS
 # ===============================================
 
-# 1. Configuración de Django Rest Framework (DRF)
+# 1. Configuración de Django Rest Framework 
 REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticated',
     ),
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework.authentication.TokenAuthentication',
-        'rest_framework.authentication.SessionAuthentication', 
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
     )
 }
 
 # 2. Configuración de CORS para Vue.js
 # Esto permite que tu frontend Vue (ej: en puerto 8080 o 5173) se comunique con Django (puerto 8000)
 
-CORS_ALLOWED_ORIGINS = [ # Opción más segura, puedes habilitarla más tarde
+CORS_ALLOWED_ORIGINS = [ 
     "http://localhost:8080",
     "http://127.0.0.1:8080",
     "http://localhost:5173",

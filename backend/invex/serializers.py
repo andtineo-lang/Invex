@@ -84,3 +84,4 @@ class DiaImportanteSerializer(serializers.ModelSerializer):
     class Meta:
         model = DiaImportante
         fields = '__all__'
+    

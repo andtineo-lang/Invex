@@ -2,119 +2,59 @@ import { createRouter, createWebHistory } from 'vue-router'
 import Principal from '../components/principal.vue'
 import Registro from '../components/Registro.vue'
 import Login from '../components/Login.vue'
-import Invex from '../components/Invex.vue'
-
-// Layout
 import DashboardLayout from '../components/DashboardLayout.vue'
-
-// Páginas internas del dashboard
 import Inventario from '../components/inventario.vue'
 import Usuarios from '../components/usuarios.vue'
 import Proyecciones from '../components/proyecciones.vue'
 import Reportes from '../components/reportes.vue'
 import Configuracion from '../components/configuracion.vue'
-import RecuperarPassword from '../components/RecuperarPassword.vue'
-
-// Importar las vistas
-import Caracteristicas from '../components/caracteristicas.vue'
-import Precios from '../components/precios.vue'
-import Documentacion from '../components/documentacion.vue'
-import Contacto from '../components/contacto.vue'
-import Faq from '../components/faq.vue'
+// ...otros imports...
 
 const routes = [
-  { 
-    path: '/', 
-    name: 'Principal', 
-    component: Principal 
-  },
-  { 
-    path: '/login', 
-    name: 'Login', 
-    component: Login 
-  },
-  { 
-    path: '/registro', 
-    name: 'Registro', 
-    component: Registro 
-  },
-  { 
-    path: '/recuperar-password', 
-    name: 'RecuperarPassword', 
-    component: RecuperarPassword 
-  },
-  { 
-    path: '/invex', 
-    name: 'Invex', 
-    component: Invex 
-  },
-  // --- Páginas del Footer ---
-  { 
-    path: '/caracteristicas', 
-    name: 'Caracteristicas', 
-    component: Caracteristicas 
-  },
-  { 
-    path: '/precios', 
-    name: 'Precios', 
-    component: Precios 
-  },
-  { 
-    path: '/documentacion', 
-    name: 'Documentacion', 
-    component: Documentacion 
-  },
-  { 
-    path: '/contacto', 
-    name: 'Contacto', 
-    component: Contacto 
-  },
-  { 
-    path: '/faq', 
-    name: 'Faq', 
-    component: Faq 
-  },
-
+  { path: '/', name: 'Principal', component: Principal },
+  { path: '/login', name: 'Login', component: Login },
+  { path: '/registro', name: 'Registro', component: Registro },
+  // ...otras rutas públicas...
 
   // Rutas del dashboard agrupadas bajo el layout
   {
-    path: '/',
+    path: '/dashboard',
     component: DashboardLayout,
+    meta: { requiresAuth: true }, // Toda la sección del dashboard requiere login
     children: [
+      {
+        path: '',
+        redirect: '/dashboard/inventario'
+      },
       { 
         path: 'inventario', 
         name: 'Inventario', 
         component: Inventario,
-        meta: { requiresAuth: true }
-        // meta: { requiresAuth: true, roles: ['admin', 'trabajador'] }
+        meta: { roles: ['admin', 'manager', 'worker'] }
       },
       { 
         path: 'usuarios', 
         name: 'Usuarios', 
         component: Usuarios,
-        meta: { requiresAuth: true }
-        // meta: { requiresAuth: true, roles: ['admin'] }
+        meta: { roles: ['admin'] }
       },
       { 
         path: 'proyecciones', 
         name: 'Proyecciones', 
         component: Proyecciones,
-        meta: { requiresAuth: true }
-        // meta: { requiresAuth: true, roles: ['admin', 'trabajador'] }
+        meta: { roles: ['admin', 'manager'] }
       },
       { 
         path: 'reportes', 
         name: 'Reportes', 
         component: Reportes,
-        meta: { requiresAuth: true }
-        // meta: { requiresAuth: true, roles: ['admin', 'trabajador'] }
+        meta: { roles: ['admin', 'manager'] }
       },
       { 
         path: 'configuracion', 
         name: 'Configuracion', 
         component: Configuracion,
-        meta: { requiresAuth: true }
-        // meta: { requiresAuth: true, roles: ['admin'] }
+        meta: { roles: ['admin'] }
       }
     ]
   }
@@ -123,33 +63,25 @@ const routes = [
 const router = createRouter({
   history: createWebHistory(),
   routes,
-  scrollBehavior(to) {
-    if (to.hash) {
-      return {
-        el: to.hash,
-        behavior: 'smooth'
-      }
-    }
-    return { top: 0, behavior: 'smooth' }
-  }
+  // ... scrollBehavior
 })
 
-/*
-// 🔒 Guard de navegación con roles (opcional)
+// 🔒 Guard de navegación con roles (ACTIVADO)
 router.beforeEach((to, from, next) => {
-  const isAuthenticated = localStorage.getItem('userToken') // tu token de auth
-  const userRole = localStorage.getItem('userRole') || 'trabajador'
+  const isAuthenticated = !!localStorage.getItem('authToken');
+  const userRole = localStorage.getItem('userRole');
 
   if (to.meta.requiresAuth && !isAuthenticated) {
-    return next('/login')
+    return next('/login');
   }
 
+  // La comprobación de roles solo se aplica a las rutas hijas que tienen 'meta.roles'
   if (to.meta.roles && !to.meta.roles.includes(userRole)) {
-    return next('/inventario') // redirige si no tiene permiso
+    alert('No tienes permiso para acceder a esta página.'); // Opcional: mostrar alerta
+    return next('/dashboard/inventario'); // Redirige si no tiene permiso
   }
 
-  next()
+  next();
 })
-*/
 
 export default router
