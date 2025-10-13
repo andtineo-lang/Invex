@@ -95,7 +95,10 @@ class RegisterAndActivateView(APIView):
         payment_data = request.data.get('payment')
 
         if not registration_data or not payment_data:
-            return Response({"detail": "Faltan datos de registro o de pago."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"detail": "Faltan datos de registro o de pago."}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
         
         serializer = FullRegistrationSerializer(data=registration_data)
         
@@ -105,7 +108,8 @@ class RegisterAndActivateView(APIView):
             
             return Response({
                 'message': '¡Usuario y suscripción creados exitosamente!',
-                'token': str(refresh.access_token)
+                'token': str(refresh.access_token),
+                'rol': 'admin' # <-- LÍNEA AÑADIDA
             }, status=status.HTTP_201_CREATED)
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

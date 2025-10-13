@@ -87,7 +87,7 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import api from '../api/axios'; // <-- Importa nuestra instancia de axios configurada
+import api from '../api/axios'; // <-- CAMBIO CLAVE: Importa la instancia configurada
 
 const router = useRouter();
 const menuOpen = ref(false);
@@ -99,6 +99,7 @@ const user = ref({
   rol: ''
 });
 
+// (navItems y otras funciones se mantienen igual)
 const navItems = [
   { name: 'Inventario', path: '/dashboard/inventario' },
   { name: 'Importar', path: '/dashboard/inventario/importar' },
@@ -110,7 +111,7 @@ const navItems = [
 
 const fetchUserData = async () => {
   try {
-    // Llama al endpoint que devuelve los datos del usuario actual
+    // CAMBIO CLAVE: Usa 'api' para la llamada
     const response = await api.get('/auth/user/');
     const userData = response.data;
     const userRole = localStorage.getItem('userRole') || 'Invitado';
@@ -120,10 +121,8 @@ const fetchUserData = async () => {
       rol: userRole,
       iniciales: (userData.nombre || 'U').split(' ').map(n => n[0]).join('').toUpperCase(),
     };
-
   } catch (error) {
     console.error("Error al obtener datos del usuario:", error);
-    // Si el token es inválido o expiró, cierra la sesión
     logout();
   }
 };

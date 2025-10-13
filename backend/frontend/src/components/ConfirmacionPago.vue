@@ -49,7 +49,7 @@ onMounted(async () => {
   }
 
   try {
-    // ✅ PASO 1: Confirmar el estado de la transacción con el backend
+    // ✅ PASO 1: Confirmar el estado de la transacción con el backend de Transbank
     const confirmResponse = await fetch('http://127.0.0.1:5000/api/confirm-transaction', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -65,13 +65,13 @@ onMounted(async () => {
     
     statusMessage.value = 'Pago confirmado. Creando tu cuenta...';
     
-    // ✅ PASO 2: Recuperar los datos de registro guardados
+    // ✅ PASO 2: Recuperar los datos de registro guardados en la sesión
     const pendingData = JSON.parse(sessionStorage.getItem('pendingRegistrationData'));
     if (!pendingData) {
       throw new Error('No se encontraron datos de registro para finalizar la creación de la cuenta.');
     }
 
-    // ✅ PASO 3: Enviar los datos al backend para crear y activar la cuenta
+    // ✅ PASO 3: Enviar los datos al backend de Django para crear y activar la cuenta
     const registerResponse = await fetch('http://127.0.0.1:8000/api/auth/register-and-activate/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -88,8 +88,10 @@ onMounted(async () => {
 
     const userData = await registerResponse.json();
 
-    // ✅ PASO 4: Guardar el token REAL y limpiar
+    // ✅ PASO 4: Guardar el token y el ROL del usuario, y luego limpiar
     localStorage.setItem('authToken', userData.token); // El token JWT real del backend
+    localStorage.setItem('userRole', userData.rol);   // El rol del nuevo usuario ('admin')
+
     sessionStorage.removeItem('pendingRegistrationData'); // Limpiar datos temporales
 
   } catch (error) {
