@@ -228,7 +228,7 @@ const handlePayment = async () => {
   try {
     sessionStorage.setItem('pendingRegistrationData', JSON.stringify(form));
 
-    const response = await fetch('http://12-7.0.0.1:5000/api/create-transaction', {
+    const response = await fetch('http://127.0.0.1:5000/api/create-transaction', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
