@@ -9,17 +9,35 @@ from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated 
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from .models import Empresa, UsuarioEmpresa, Producto, Stock, Suscripcion, DiaImportante, Categoria
-from .serializers import *
+from .models import (
+    Empresa, 
+    UsuarioEmpresa, 
+    Producto, 
+    Stock, 
+    Suscripcion, 
+    DiaImportante, 
+    Categoria
+)
+from .serializers import (
+    UsuarioSerializer, 
+    EmpresaSerializer,
+    ProductoSerializer,
+    StockSerializer,
+    SuscripcionSerializer,
+    DiaImportanteSerializer,
+    FullRegistrationSerializer 
+)
 
 Usuario = get_user_model()
-
 
 # ----------------------------------------------------
 # SECCIÓN DE AUTENTICACIÓN Y PERFIL
 # ----------------------------------------------------
 
 class CustomLoginView(APIView):
+    """
+    Gestiona el inicio de sesión del usuario validando email, contraseña y empresa.
+    """
     permission_classes = [AllowAny]
 
     def post(self, request, *args, **kwargs):
@@ -28,11 +46,8 @@ class CustomLoginView(APIView):
         empresa_nombre = request.data.get('empresa')
 
         if not email or not password or not empresa_nombre:
-            return Response(
-                {"detail": "Email, contraseña y empresa son requeridos."},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
+            return Response({"detail": "Email, contraseña y empresa son requeridos."}, status=status.HTTP_400_BAD_REQUEST)
+        
         try:
             user = Usuario.objects.get(email=email)
         except Usuario.DoesNotExist:
@@ -40,15 +55,12 @@ class CustomLoginView(APIView):
 
         if not user.check_password(password):
             return Response({"detail": "Credenciales inválidas."}, status=status.HTTP_401_UNAUTHORIZED)
-
+            
         try:
             relacion = user.relaciones.get(empresa__nombre=empresa_nombre)
             user_role = relacion.rol
         except UsuarioEmpresa.DoesNotExist:
-            return Response(
-                {"detail": f"El usuario no tiene acceso a la empresa '{empresa_nombre}'."},
-                status=status.HTTP_403_FORBIDDEN
-            )
+            return Response({"detail": f"El usuario no tiene acceso a la empresa '{empresa_nombre}'."}, status=status.HTTP_403_FORBIDDEN)
 
         refresh = RefreshToken.for_user(user)
         return Response({
@@ -58,36 +70,54 @@ class CustomLoginView(APIView):
         })
 
 
-class RegistroView(generics.CreateAPIView):
-    serializer_class = RegistroSerializer
-    permission_classes = [AllowAny]
-
-    def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        result = serializer.save()
-        
-        return Response({
-            "mensaje": "Registro exitoso",
-            "usuario": UsuarioSerializer(result["usuario"]).data,
-            "empresa": EmpresaSerializer(result["empresa"]).data,
-            "rol": result["rol"]
-        })
-
-
 class CurrentUserView(APIView):
+    """
+    Devuelve los datos del usuario autenticado actualmente.
+    """
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
         serializer = UsuarioSerializer(request.user)
         return Response(serializer.data)
 
+# ----------------------------------------------------
+# VISTA PARA EL FLUJO DE PAGO Y REGISTRO
+# ----------------------------------------------------
+class RegisterAndActivateView(APIView):
+    """
+    Gestiona el registro final de un usuario después de un pago exitoso.
+    Delega la lógica de creación al FullRegistrationSerializer.
+    """
+    permission_classes = [AllowAny]
+    
+    def post(self, request, *args, **kwargs):
+        registration_data = request.data.get('registration')
+        payment_data = request.data.get('payment')
+
+        if not registration_data or not payment_data:
+            return Response({"detail": "Faltan datos de registro o de pago."}, status=status.HTTP_400_BAD_REQUEST)
+        
+        serializer = FullRegistrationSerializer(data=registration_data)
+        
+        if serializer.is_valid():
+            user = serializer.save()
+            refresh = RefreshToken.for_user(user)
+            
+            return Response({
+                'message': '¡Usuario y suscripción creados exitosamente!',
+                'token': str(refresh.access_token)
+            }, status=status.HTTP_201_CREATED)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 # ----------------------------------------------------
 # VISTA DE ACCIÓN PARA IMPORTAR INVENTARIO
 # ----------------------------------------------------
 
 class InventarioImportAPIView(APIView):
+    """
+    Gestiona la importación de inventario desde datos JSON enviados por el frontend.
+    """
     permission_classes = [IsAuthenticated]
 
     def post(self, request, empresa_id):
@@ -139,27 +169,17 @@ class InventarioImportAPIView(APIView):
 
                     Stock.objects.update_or_create(
                         producto=producto,
-                        defaults={
-                            'stock_actual': int(item.get('stock_actual', 0) or 0),
-                            'stock_transito': int(item.get('stock_transito', 0) or 0),
-                            'ventas_proyectadas': int(item.get('ventas_proyectadas', 0) or 0),
-                        }
+                        defaults={ 'stock_actual': int(item.get('stock_actual', 0) or 0) }
                     )
                     productos_procesados += 1
                 
                 if errores:
                     raise ValueError("Se encontraron errores de validación.")
 
-        except (ValueError, Exception) as e:
-            return Response({
-                "error": "No se pudo completar la importación.",
-                "detalles": errores if errores else [str(e)]
-            }, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({"error": "No se pudo completar la importación.", "detalles": [str(e)]}, status=status.HTTP_400_BAD_REQUEST)
 
-        return Response({
-            "mensaje": f"Se importaron y/o actualizaron {productos_procesados} productos exitosamente."
-        }, status=status.HTTP_201_CREATED)
-
+        return Response({"mensaje": f"Se importaron y/o actualizaron {productos_procesados} productos exitosamente."}, status=status.HTTP_201_CREATED)
 
 # ----------------------------------------------------
 # FUNCIÓN AUXILIAR DE FILTRADO
@@ -167,7 +187,6 @@ class InventarioImportAPIView(APIView):
 
 def get_user_companies_ids(user):
     return UsuarioEmpresa.objects.filter(usuario=user).values_list('empresa_id', flat=True)
-
 
 # ----------------------------------------------------
 # VIEWSETS DE DATOS (PARA OPERACIONES CRUD)
@@ -186,7 +205,6 @@ class EmpresaViewSet(viewsets.ModelViewSet):
         empresa = serializer.save()
         UsuarioEmpresa.objects.create(usuario=self.request.user, empresa=empresa, rol='admin')
 
-
 class ProductoViewSet(viewsets.ModelViewSet):
     serializer_class = ProductoSerializer
     permission_classes = [IsAuthenticated]
@@ -195,7 +213,6 @@ class ProductoViewSet(viewsets.ModelViewSet):
         user = self.request.user
         empresas_ids = get_user_companies_ids(user)
         return Producto.objects.filter(empresa_id__in=empresas_ids)
-
 
 class StockViewSet(viewsets.ModelViewSet):
     serializer_class = StockSerializer
@@ -206,7 +223,6 @@ class StockViewSet(viewsets.ModelViewSet):
         empresas_ids = get_user_companies_ids(user)
         return Stock.objects.filter(producto__empresa_id__in=empresas_ids)
 
-
 class SuscripcionViewSet(viewsets.ModelViewSet):
     serializer_class = SuscripcionSerializer
     permission_classes = [IsAuthenticated]
@@ -215,7 +231,6 @@ class SuscripcionViewSet(viewsets.ModelViewSet):
         user = self.request.user
         empresas_ids = get_user_companies_ids(user)
         return Suscripcion.objects.filter(empresa_id__in=empresas_ids)
-
 
 class DiaImportanteViewSet(viewsets.ModelViewSet):
     serializer_class = DiaImportanteSerializer
