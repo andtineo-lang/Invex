@@ -56,9 +56,9 @@
           <table class="preview-table">
             <thead>
               <tr>
-                <th>Nombre del Producto (Mapeado)</th>
-                <th>Stock Actual (Mapeado)</th>
-                <th>Categoría (Mapeado)</th>
+                <th>Nombre del Producto </th>
+                <th>Stock Actual </th>
+                <th>Categoría </th>
               </tr>
             </thead>
             <tbody>
