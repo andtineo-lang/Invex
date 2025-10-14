@@ -117,10 +117,77 @@
       </div>
     </div>
 
-    <div v-if="showAddModal" class="fixed inset-0 bg-black/50 ...">
+    <div v-if="showAddModal" class="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50">
+      <div class="bg-white rounded-t-2xl sm:rounded-xl p-5 sm:p-6 w-full max-w-md sm:max-w-lg shadow-xl">
+        <h3 class="text-lg font-semibold mb-4">Agregar Nuevo Producto</h3>
+        <form @submit.prevent="addProduct">
+          <div class="space-y-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Nombre del Producto</label>
+              <input v-model="newProduct.name" type="text" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500">
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">SKU</label>
+              <input v-model="newProduct.sku" type="text" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500">
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Stock Inicial</label>
+                <input v-model.number="newProduct.stock" type="number" min="0" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500">
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Ventas Proy./sem</label>
+                <input v-model.number="newProduct.projectedSales" type="number" min="0" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500">
+              </div>
+            </div>
+          </div>
+          <div class="flex flex-col sm:flex-row sm:justify-end gap-3 mt-6">
+            <button type="button" @click="showAddModal = false" class="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200">
+              Cancelar
+            </button>
+            <button type="submit" class="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700">
+              Agregar
+            </button>
+          </div>
+        </form>
       </div>
-    <div v-if="showEditModal" class="fixed inset-0 bg-black/50 ...">
+    </div>
+
+    <div v-if="showEditModal" class="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50">
+      <div class="bg-white rounded-t-2xl sm:rounded-xl p-5 sm:p-6 w-full max-w-md sm:max-w-lg shadow-xl">
+        <h3 class="text-lg font-semibold mb-4">Editar Producto</h3>
+        <form @submit.prevent="updateProduct">
+          <div class="space-y-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Nombre del Producto</label>
+              <input v-model="editingProduct.name" type="text" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500">
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">SKU</label>
+              <input v-model="editingProduct.sku" type="text" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500">
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Stock Actual</label>
+                <input v-model.number="editingProduct.stock" type="number" min="0" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500">
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Ventas Proy./sem</label>
+                <input v-model.number="editingProduct.projectedSales" type="number" min="0" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500">
+              </div>
+            </div>
+          </div>
+          <div class="flex flex-col sm:flex-row sm:justify-end gap-3 mt-6">
+            <button type="button" @click="showEditModal = false" class="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200">
+              Cancelar
+            </button>
+            <button type="submit" class="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700">
+              Guardar Cambios
+            </button>
+          </div>
+        </form>
       </div>
+    </div>
   </div>
 </template>
 
@@ -130,7 +197,7 @@ import axios from 'axios'
 
 const API_URL = 'http://127.0.0.1:8000/api/productos/'
 
-// --- ESTADO DEL COMPONENTE (sin cambios) ---
+// --- ESTADO DEL COMPONENTE ---
 const products = ref([])
 const searchTerm = ref('')
 const isLoading = ref(true)
@@ -140,7 +207,7 @@ const newProduct = ref({ name: '', sku: '', stock: 0, projectedSales: 0 })
 const showEditModal = ref(false)
 const editingProduct = ref(null)
 
-// --- LÓGICA DE LA API (actualizada para recibir los nuevos datos) ---
+// --- LÓGICA DE LA API ---
 async function fetchProducts() {
   isLoading.value = true
   errorMessage.value = null
@@ -154,8 +221,8 @@ async function fetchProducts() {
       inTransit: p.inTransit,
       projectedSales: p.projectedSales,
       seasonal: p.seasonal,
-      proyeccion_status: p.proyeccion_status,       // <-- Dato nuevo
-      proyeccion_cantidad: p.proyeccion_cantidad  // <-- Dato nuevo
+      proyeccion_status: p.proyeccion_status,
+      proyeccion_cantidad: p.proyeccion_cantidad
     }));
   } catch (error) {
     console.error("Error al obtener productos:", error)
@@ -165,12 +232,63 @@ async function fetchProducts() {
   }
 }
 
-// --- RESTO DE LAS FUNCIONES DE LA API (sin cambios) ---
-async function addProduct() { /* ... */ }
-async function deleteProduct(productId) { /* ... */ }
-function openEdit(product) { /* ... */ }
-async function updateProduct() { /* ... */ }
+async function addProduct() {
+  const payload = {
+    nombre: newProduct.value.name,
+    sku: newProduct.value.sku,
+    stock_data: {
+      stock_actual: newProduct.value.stock,
+      ventas_proyectadas: newProduct.value.projectedSales,
+      stock_transito: 0,
+      demanda_estacional: "Normal"
+    }
+  }
+  try {
+    await axios.post(API_URL, payload)
+    await fetchProducts()
+    showAddModal.value = false
+    newProduct.value = { name: '', sku: '', stock: 0, projectedSales: 0 }
+  } catch (error) {
+    console.error("Error al agregar producto:", error.response ? error.response.data : error)
+    alert("Hubo un error al guardar el producto.")
+  }
+}
 
+async function deleteProduct(productId) {
+  if (!confirm('¿Estás seguro de que quieres eliminar este producto?')) return
+  try {
+    await axios.delete(`${API_URL}${productId}/`)
+    await fetchProducts()
+  } catch (error) {
+    console.error("Error al eliminar producto:", error)
+    alert("Hubo un error al eliminar el producto.")
+  }
+}
+
+function openEdit(product) {
+  editingProduct.value = { ...product }
+  showEditModal.value = true
+}
+
+async function updateProduct() {
+  if (!editingProduct.value) return
+  const payload = {
+    nombre: editingProduct.value.name,
+    sku: editingProduct.value.sku,
+    stock_data: {
+      stock_actual: editingProduct.value.stock,
+      ventas_proyectadas: editingProduct.value.projectedSales,
+    }
+  }
+  try {
+    await axios.patch(`${API_URL}${editingProduct.value.id}/`, payload)
+    await fetchProducts()
+    showEditModal.value = false
+  } catch (error) {
+    console.error("Error al actualizar el producto:", error.response ? error.response.data : error)
+    alert("Hubo un error al actualizar el producto.")
+  }
+}
 
 // --- LÓGICA DEL COMPONENTE ---
 onMounted(() => {
@@ -183,7 +301,6 @@ const filteredProducts = computed(() => {
   return products.value.filter(p => p.name.toLowerCase().includes(q) || (p.sku && p.sku.toLowerCase().includes(q)))
 })
 
-// --- FUNCIONES DE ESTILO (con la nueva función de proyección) ---
 const getStockClass = (stock) => {
   if (stock < 100) return 'bg-red-100 text-red-800'
   if (stock < 300) return 'bg-yellow-100 text-yellow-800'
@@ -200,7 +317,6 @@ const getSeasonalClass = (seasonal) => {
   return classes[seasonal] || 'bg-gray-100 text-gray-800'
 }
 
-// NUEVA FUNCIÓN para dar color al estado de la proyección
 const getProyeccionClass = (status) => {
   if (status === 'Comprar Ahora') return 'text-red-600'
   if (status === 'Revisar Pronto') return 'text-yellow-600'
