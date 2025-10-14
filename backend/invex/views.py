@@ -1,72 +1,68 @@
 # invex/views.py
-import csv
-import io
 from django.db import transaction
 from django.contrib.auth import get_user_model
 from rest_framework import viewsets, generics, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.permissions import AllowAny, IsAuthenticated 
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from .models import Empresa, UsuarioEmpresa, Producto, Stock, Suscripcion, DiaImportante, Categoria
-from .serializers import *
+# MEJORA: Importaciones explícitas en lugar de '*' para mayor claridad.
+from .models import (
+    Empresa,
+    UsuarioEmpresa,
+    Producto,
+    Stock,
+    Suscripcion,
+    DiaImportante,
+    Categoria
+)
+from .serializers import (
+    RegistroSerializer,
+    UsuarioSerializer,
+    EmpresaSerializer,
+    ProductoSerializer,
+    SuscripcionSerializer,
+    DiaImportanteSerializer
+)
 
 Usuario = get_user_model()
 
-
 # ----------------------------------------------------
-# SECCIÓN DE AUTENTICACIÓN Y PERFIL
+# SECCIÓN DE AUTENTICACIÓN Y PERFIL (Sin cambios)
 # ----------------------------------------------------
 
 class CustomLoginView(APIView):
     permission_classes = [AllowAny]
-
     def post(self, request, *args, **kwargs):
+        # ... (Tu lógica de login aquí, es correcta y no necesita cambios)
         email = request.data.get('email')
         password = request.data.get('password')
         empresa_nombre = request.data.get('empresa')
-
         if not email or not password or not empresa_nombre:
-            return Response(
-                {"detail": "Email, contraseña y empresa son requeridos."},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
+            return Response({"detail": "Email, contraseña y empresa son requeridos."}, status=status.HTTP_400_BAD_REQUEST)
         try:
             user = Usuario.objects.get(email=email)
         except Usuario.DoesNotExist:
             return Response({"detail": "Credenciales inválidas."}, status=status.HTTP_401_UNAUTHORIZED)
-
         if not user.check_password(password):
             return Response({"detail": "Credenciales inválidas."}, status=status.HTTP_401_UNAUTHORIZED)
-
         try:
             relacion = user.relaciones.get(empresa__nombre=empresa_nombre)
             user_role = relacion.rol
         except UsuarioEmpresa.DoesNotExist:
-            return Response(
-                {"detail": f"El usuario no tiene acceso a la empresa '{empresa_nombre}'."},
-                status=status.HTTP_403_FORBIDDEN
-            )
-
+            return Response({"detail": f"El usuario no tiene acceso a la empresa '{empresa_nombre}'."}, status=status.HTTP_403_FORBIDDEN)
         refresh = RefreshToken.for_user(user)
-        return Response({
-            'refresh': str(refresh),
-            'access': str(refresh.access_token),
-            'rol': user_role
-        })
-
+        return Response({'refresh': str(refresh), 'access': str(refresh.access_token), 'rol': user_role})
 
 class RegistroView(generics.CreateAPIView):
     serializer_class = RegistroSerializer
     permission_classes = [AllowAny]
-
     def create(self, request, *args, **kwargs):
+        # ... (Tu lógica de registro aquí, es correcta y no necesita cambios)
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         result = serializer.save()
-        
         return Response({
             "mensaje": "Registro exitoso",
             "usuario": UsuarioSerializer(result["usuario"]).data,
@@ -74,37 +70,30 @@ class RegistroView(generics.CreateAPIView):
             "rol": result["rol"]
         })
 
-
 class CurrentUserView(APIView):
     permission_classes = [IsAuthenticated]
-
     def get(self, request):
         serializer = UsuarioSerializer(request.user)
         return Response(serializer.data)
 
-
 # ----------------------------------------------------
-# VISTA DE ACCIÓN PARA IMPORTAR INVENTARIO
+# VISTA DE ACCIÓN PARA IMPORTAR INVENTARIO (Sin cambios)
 # ----------------------------------------------------
-
 class InventarioImportAPIView(APIView):
     permission_classes = [IsAuthenticated]
-
+    # ... (Tu lógica de importación aquí, es correcta y no necesita cambios)
     def post(self, request, empresa_id):
         user = request.user
         empresas_del_usuario = UsuarioEmpresa.objects.filter(usuario=user).values_list('empresa_id', flat=True)
         if empresa_id not in empresas_del_usuario:
             return Response({"error": "No tienes permiso para acceder a esta empresa."}, status=status.HTTP_403_FORBIDDEN)
-        
         try:
             empresa = Empresa.objects.get(pk=empresa_id)
         except Empresa.DoesNotExist:
             return Response({"error": "Empresa no encontrada."}, status=status.HTTP_404_NOT_FOUND)
-
         data = request.data
         if not isinstance(data, list) or not data:
             return Response({"error": "Los datos deben ser una lista de productos."}, status=status.HTTP_400_BAD_REQUEST)
-        
         return self._procesar_json(data, empresa)
 
     def _procesar_json(self, productos_data, empresa):
@@ -117,7 +106,6 @@ class InventarioImportAPIView(APIView):
                     if not nombre_producto:
                         errores.append(f"Fila {i+1}: El nombre del producto es obligatorio.")
                         continue
-                    
                     nombre_categoria = item.get('categoria')
                     categoria_obj = None
                     if nombre_categoria and nombre_categoria.strip():
@@ -126,17 +114,10 @@ class InventarioImportAPIView(APIView):
                             nombre__iexact=nombre_categoria.strip(),
                             defaults={'nombre': nombre_categoria.strip()}
                         )
-
                     producto, _ = Producto.objects.update_or_create(
-                        empresa=empresa,
-                        nombre__iexact=nombre_producto.strip(),
-                        defaults={
-                            'nombre': nombre_producto.strip(),
-                            'unidad_medida': item.get('unidad_medida', 'unidades'),
-                            'categoria': categoria_obj
-                        }
+                        empresa=empresa, nombre__iexact=nombre_producto.strip(),
+                        defaults={'nombre': nombre_producto.strip(), 'unidad_medida': item.get('unidad_medida', 'unidades'), 'categoria': categoria_obj}
                     )
-
                     Stock.objects.update_or_create(
                         producto=producto,
                         defaults={
@@ -146,82 +127,68 @@ class InventarioImportAPIView(APIView):
                         }
                     )
                     productos_procesados += 1
-                
                 if errores:
                     raise ValueError("Se encontraron errores de validación.")
-
         except (ValueError, Exception) as e:
-            return Response({
-                "error": "No se pudo completar la importación.",
-                "detalles": errores if errores else [str(e)]
-            }, status=status.HTTP_400_BAD_REQUEST)
-
-        return Response({
-            "mensaje": f"Se importaron y/o actualizaron {productos_procesados} productos exitosamente."
-        }, status=status.HTTP_201_CREATED)
-
+            return Response({"error": "No se pudo completar la importación.", "detalles": errores if errores else [str(e)]}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"mensaje": f"Se importaron y/o actualizaron {productos_procesados} productos exitosamente."}, status=status.HTTP_201_CREATED)
 
 # ----------------------------------------------------
-# FUNCIÓN AUXILIAR DE FILTRADO
+# MEJORA: MIXIN PARA REUTILIZAR LA LÓGICA DE FILTRADO
 # ----------------------------------------------------
-
-def get_user_companies_ids(user):
-    return UsuarioEmpresa.objects.filter(usuario=user).values_list('empresa_id', flat=True)
-
-
-# ----------------------------------------------------
-# VIEWSETS DE DATOS (PARA OPERACIONES CRUD)
-# ----------------------------------------------------
-
-class EmpresaViewSet(viewsets.ModelViewSet):
-    serializer_class = EmpresaSerializer
+class EmpresaScopeMixin:
+    """
+    Un Mixin que filtra los resultados para que un usuario solo vea
+    los objetos relacionados con las empresas a las que pertenece.
+    """
     permission_classes = [IsAuthenticated]
-    
+    # Campo a usar para el filtro, por defecto es 'empresa_id__in'
+    empresa_lookup_field = 'empresa_id__in'
+
     def get_queryset(self):
         user = self.request.user
-        empresas_ids = get_user_companies_ids(user)
-        return Empresa.objects.filter(id__in=empresas_ids)
+        empresas_ids = UsuarioEmpresa.objects.filter(usuario=user).values_list('empresa_id', flat=True)
+        # Usamos super() para obtener el queryset base del ModelViewSet
+        queryset = super().get_queryset()
+        # Filtramos el queryset usando el campo de búsqueda definido
+        return queryset.filter(**{self.empresa_lookup_field: empresas_ids})
+
+# ----------------------------------------------------
+# VIEWSETS DE DATOS (Refactorizados para usar el Mixin)
+# ----------------------------------------------------
+
+class EmpresaViewSet(EmpresaScopeMixin, viewsets.ModelViewSet):
+    serializer_class = EmpresaSerializer
+    queryset = Empresa.objects.all()
+    # Sobreescribimos el campo de búsqueda para este modelo específico
+    empresa_lookup_field = 'id__in'
     
     def perform_create(self, serializer):
+        # Al crear una empresa, se asigna al usuario como admin
         empresa = serializer.save()
         UsuarioEmpresa.objects.create(usuario=self.request.user, empresa=empresa, rol='admin')
 
-
-class ProductoViewSet(viewsets.ModelViewSet):
+class ProductoViewSet(EmpresaScopeMixin, viewsets.ModelViewSet):
     serializer_class = ProductoSerializer
-    permission_classes = [IsAuthenticated]
-    
-    def get_queryset(self):
-        user = self.request.user
-        empresas_ids = get_user_companies_ids(user)
-        return Producto.objects.filter(empresa_id__in=empresas_ids)
+    queryset = Producto.objects.all()
+    def get_serializer_context(self):
+        """
+        Pasa el objeto 'request' al serializer. Es necesario para que el
+        serializer sepa qué usuario está creando el producto.
+        """
+        return {'request': self.request}
 
-
-class StockViewSet(viewsets.ModelViewSet):
-    serializer_class = StockSerializer
-    permission_classes = [IsAuthenticated]
-
-    def get_queryset(self):
-        user = self.request.user
-        empresas_ids = get_user_companies_ids(user)
-        return Stock.objects.filter(producto__empresa_id__in=empresas_ids)
-
-
-class SuscripcionViewSet(viewsets.ModelViewSet):
+class SuscripcionViewSet(EmpresaScopeMixin, viewsets.ModelViewSet):
     serializer_class = SuscripcionSerializer
-    permission_classes = [IsAuthenticated]
-    
-    def get_queryset(self):
-        user = self.request.user
-        empresas_ids = get_user_companies_ids(user)
-        return Suscripcion.objects.filter(empresa_id__in=empresas_ids)
+    queryset = Suscripcion.objects.all()
 
-
-class DiaImportanteViewSet(viewsets.ModelViewSet):
+class DiaImportanteViewSet(EmpresaScopeMixin, viewsets.ModelViewSet):
     serializer_class = DiaImportanteSerializer
-    permission_classes = [IsAuthenticated]
-    
-    def get_queryset(self):
-        user = self.request.user
-        empresas_ids = get_user_companies_ids(user)
-        return DiaImportante.objects.filter(empresa_id__in=empresas_ids)
+    queryset = DiaImportante.objects.all()
+
+# ## CORRECCIÓN PRINCIPAL ##
+# El siguiente ViewSet ha sido eliminado porque es redundante.
+# La información del stock ya está incluida en el ProductoSerializer.
+#
+# class StockViewSet(viewsets.ModelViewSet):
+#     ... (CÓDIGO ELIMINADO)

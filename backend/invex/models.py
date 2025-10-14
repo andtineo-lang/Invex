@@ -19,6 +19,12 @@ class UsuarioManager(BaseUserManager):
     def create_superuser(self, email, password=None, **extra_fields):
         extra_fields.setdefault("is_staff", True)
         extra_fields.setdefault("is_superuser", True)
+
+        if extra_fields.get("is_staff") is not True:
+            raise ValueError("Superuser must have is_staff=True.")
+        if extra_fields.get("is_superuser") is not True:
+            raise ValueError("Superuser must have is_superuser=True.")
+
         return self.create_user(email, password, **extra_fields)
 
 # ---------------------------
@@ -34,7 +40,7 @@ class Usuario(AbstractBaseUser, PermissionsMixin):
     objects = UsuarioManager()
 
     USERNAME_FIELD = 'email'
-    REQUIRED_FIELDS = []  # solo email y password
+    REQUIRED_FIELDS = []
 
     def __str__(self):
         return self.email
@@ -73,6 +79,8 @@ class UsuarioEmpresa(models.Model):
 
     class Meta:
         unique_together = ('usuario', 'empresa')
+        verbose_name = "Relación Usuario-Empresa"
+        verbose_name_plural = "Relaciones Usuario-Empresa"
 
     def __str__(self):
         return f"{self.usuario.email} en {self.empresa.nombre} como {self.get_rol_display()}"
@@ -110,6 +118,7 @@ class Categoria(models.Model):
 
     class Meta:
         unique_together = ('empresa', 'nombre')
+        verbose_name_plural = "Categorías"
 
     def __str__(self):
         return self.nombre
@@ -117,9 +126,10 @@ class Categoria(models.Model):
 class Producto(models.Model):
     empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name='productos')
     nombre = models.CharField(max_length=255)
+    sku = models.CharField(max_length=100, blank=True, null=True, unique=True)
     unidad_medida = models.CharField(max_length=50, default='unidades')
     categoria = models.ForeignKey(Categoria, on_delete=models.SET_NULL, null=True, blank=True, related_name='productos')
-
+    
     def __str__(self):
         return f"{self.nombre} ({self.empresa.nombre})"
 
@@ -128,8 +138,44 @@ class Stock(models.Model):
     stock_actual = models.PositiveIntegerField(default=0)
     stock_transito = models.PositiveIntegerField(default=0)
     ventas_proyectadas = models.PositiveIntegerField(default=0)
-    demanda_estacional = models.PositiveIntegerField(default=0)
+    demanda_estacional = models.CharField(max_length=100, default="Normal")
     fecha_entrega_aprox = models.DateField(null=True, blank=True)
+
+    # --- LÓGICA DE PROYECCIÓN AÑADIDA ---
+    SEMANAS_DE_SEGURIDAD = 2
+    SEMANAS_OBJETIVO = 4
+
+    @property
+    def stock_total_disponible(self):
+        """Calcula el stock real más lo que viene en camino."""
+        return self.stock_actual + self.stock_transito
+
+    @property
+    def semanas_de_stock(self):
+        """Calcula para cuántas semanas nos alcanza el stock total disponible."""
+        if self.ventas_proyectadas > 0:
+            return self.stock_total_disponible / self.ventas_proyectadas
+        return float('inf')  # Si no hay ventas, el stock es teóricamente infinito.
+
+    @property
+    def proyeccion_status(self):
+        """Determina si es necesario comprar y devuelve un estado."""
+        if self.semanas_de_stock <= self.SEMANAS_DE_SEGURIDAD:
+            return "Comprar Ahora"
+        elif self.semanas_de_stock <= self.SEMANAS_DE_SEGURIDAD + 1:  # Umbral de advertencia
+            return "Revisar Pronto"
+        else:
+            return "Stock OK"
+
+    @property
+    def proyeccion_cantidad_a_comprar(self):
+        """Calcula cuántas unidades se recomienda comprar."""
+        if self.proyeccion_status == "Comprar Ahora":
+            stock_objetivo = self.ventas_proyectadas * self.SEMANAS_OBJETIVO
+            cantidad_necesaria = stock_objetivo - self.stock_total_disponible
+            return max(0, round(cantidad_necesaria))
+        return 0
+    # --- FIN DE LA LÓGICA DE PROYECCIÓN ---
 
     def __str__(self):
         return f"{self.producto.nombre}: {self.stock_actual}"
