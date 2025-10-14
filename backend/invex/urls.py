@@ -1,36 +1,43 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import (
-    # 'RegistroView' ha sido eliminado de esta lista
+    # Se importan todas las vistas necesarias de ambos archivos
+    RegistroView,
     CustomLoginView,
     CurrentUserView,
     RegisterAndActivateView,
-    EmpresaViewSet, 
-    ProductoViewSet, 
-    StockViewSet, 
-    SuscripcionViewSet, 
+    CrearUsuarioEmpresaView,
+    CurrentEmpresaView,
+    InventarioImportAPIView,
+    EmpresaViewSet,
+    ProductoViewSet,
+    SuscripcionViewSet,
     DiaImportanteViewSet,
-    InventarioImportAPIView
 )
 
 # Router para ViewSets (operaciones CRUD)
 router = DefaultRouter()
 router.register(r'empresas', EmpresaViewSet, basename='empresa')
 router.register(r'productos', ProductoViewSet, basename='producto')
-router.register(r'stock', StockViewSet, basename='stock')
 router.register(r'suscripciones', SuscripcionViewSet, basename='suscripcion')
 router.register(r'dias-importantes', DiaImportanteViewSet, basename='dia-importante')
 
 # Definición de URLs de la API
 urlpatterns = [
-    # La ruta para 'auth/registro/' ha sido eliminada
+    # --- Rutas de Autenticación y Perfil ---
+    path('auth/registro/', RegistroView.as_view(), name='registro'),
     path('auth/login/', CustomLoginView.as_view(), name='custom-login'),
-    path('auth/register-and-activate/', RegisterAndActivateView.as_view(), name='register_and_activate'),
-    path('auth/user/', CurrentUserView.as_view(), name='current_user'),
+    path('auth/register-and-activate/', RegisterAndActivateView.as_view(), name='register-and-activate'),
+    path('users/me/', CurrentUserView.as_view(), name='current-user'), # Ruta corregida y estandarizada
     
-    # Ruta para importar inventario
+
+    # --- Rutas de Gestión de Usuarios y Empresa ---
+    path('usuarios/crear/', CrearUsuarioEmpresaView.as_view(), name='crear-usuario-empresa'),
+    path('empresa/actual/', CurrentEmpresaView.as_view(), name='current-empresa'),
+
+    # --- Rutas de Acciones Específicas ---
     path('empresas/<int:empresa_id>/importar-inventario/', InventarioImportAPIView.as_view(), name='importar-inventario'),
-    
-    # Rutas CRUD gestionadas por el router
+
+    # --- Rutas CRUD gestionadas por el router ---
     path('', include(router.urls)),
 ]

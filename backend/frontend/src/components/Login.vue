@@ -1,7 +1,6 @@
-<template> 
+<template>
   <div class="invex-landing">
     <Header />
-
     <main class="main-content">
       <div class="login-container">
         <div class="login-left">
@@ -13,58 +12,31 @@
             <li>📈 Optimización de costos y stock</li>
           </ul>
         </div>
-
         <div class="login-right">
           <form id="msform" @submit.prevent="handleLogin">
             <fieldset>
               <h2 class="fs-title">Inicia Sesión</h2>
-
-              <input 
-                type="email" 
-                v-model="loginForm.email" 
-                placeholder="Correo electrónico" 
-                required 
-              />
-              <input 
-                type="text" 
-                v-model="loginForm.empresa" 
-                placeholder="Nombre de la Empresa" 
-                required 
-              />
+              <input type="email" v-model="loginForm.email" placeholder="Correo electrónico" required />
+              <input type="text" v-model="loginForm.empresa" placeholder="Nombre de la Empresa" required />
               <div class="password-container">
-                <input 
-                  :type="showPassword ? 'text' : 'password'" 
-                  v-model="loginForm.password" 
-                  placeholder="Contraseña" 
-                  required 
-                />
-                <span 
-                  class="toggle-password" 
-                  @click="showPassword = !showPassword"
-                  :title="showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'"
-                >
+                <input :type="showPassword ? 'text' : 'password'" v-model="loginForm.password" placeholder="Contraseña" required />
+                <span class="toggle-password" @click="showPassword = !showPassword" :title="showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'">
                   {{ showPassword ? '🙈' : '👁️' }}
                 </span>
               </div>
-
               <button type="submit" class="action-button submit" :disabled="isLoading">
                 <span v-if="!isLoading">Ingresar</span>
                 <span v-else class="spinner"></span>
               </button>
-
               <p class="fs-subtitle">
-                ¿No tienes cuenta? 
-                <router-link to="/registro">Crear cuenta</router-link>
-                <br>
-                ¿Olvidaste tu contraseña?
-                <router-link to="/recuperar-password">Recupérala aquí</router-link>
+                ¿No tienes cuenta? <router-link to="/registro">Crear cuenta</router-link><br>
+                ¿Olvidaste tu contraseña? <router-link to="/recuperar-password">Recupérala aquí</router-link>
               </p>
             </fieldset>
           </form>
         </div>
       </div>
     </main>
-
     <div v-if="showModal" class="modal-overlay">
       <div class="modal-box">
         <h2>{{ modalTitle }}</h2>
@@ -72,37 +44,37 @@
         <button @click="showModal = false">Cerrar</button>
       </div>
     </div>
-  </div> 
+  </div>
 </template>
 
 <script setup>
 import Header from '@/components/Header.vue'
 import { reactive, ref } from 'vue'
-import axios from 'axios'
+import axiosInstance from '@/api/axios.js'
 import { useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth.js'
 
 const router = useRouter()
+const authStore = useAuthStore()
 
 const loginForm = reactive({
   email: '',
-  empresa: '', 
+  empresa: '',
   password: ''
 })
 
 const showPassword = ref(false)
-const isLoading = ref(false) // Estado para mostrar el spinner
-
-// Lógica del Modal
+const isLoading = ref(false)
 const showModal = ref(false)
 const modalTitle = ref('')
 const modalMessage = ref('')
+
 const openModal = (title, message) => {
   modalTitle.value = title
   modalMessage.value = message
   showModal.value = true
 }
 
-// --- LÓGICA DE LOGIN ACTUALIZADA ---
 const handleLogin = async () => {
   if (!loginForm.email || !loginForm.password || !loginForm.empresa) {
     openModal('⚠️ Campos incompletos', 'Por favor completa todos los campos.');
@@ -110,27 +82,38 @@ const handleLogin = async () => {
   }
   
   isLoading.value = true;
-  
+  console.log("Iniciando proceso de login..."); // LOG 1
+
   try {
-    const response = await axios.post('http://127.0.0.1:8000/api/auth/login/', {
+    const loginResponse = await axiosInstance.post('/auth/login/', {
       email: loginForm.email,
       password: loginForm.password,
       empresa: loginForm.empresa
     });
 
-    // Guardamos el token y el rol en el almacenamiento local del navegador
-    localStorage.setItem('authToken', response.data.access);
-    localStorage.setItem('userRole', response.data.rol);
+    console.log("✅ Paso 1: Login API exitoso.", loginResponse.data); // LOG 2
 
-    // Redirigimos al dashboard principal
+    const accessToken = loginResponse.data.access;
+    const userRole = loginResponse.data.rol;
+
+    authStore.loginSuccess(accessToken, userRole);
+    console.log("✅ Paso 2: Store de Pinia actualizado. Autenticado:", authStore.isAuthenticated); // LOG 3
+
+    await axiosInstance.get('/users/me/');
+    console.log("✅ Paso 3: Verificación de usuario (/users/me) exitosa."); // LOG 4
+
+    console.log("🚀 Redirigiendo al dashboard..."); // LOG 5
     router.push('/dashboard'); 
     
   } catch (error) {
-    const detail = error.response?.data?.detail || 'No se pudo conectar con el servidor. Inténtalo más tarde.';
+    console.error("❌ Ocurrió un error en el bloque try:", error); // LOG DE ERROR
+    authStore.logout();
+
+    const detail = error.response?.data?.detail || 'No se pudo conectar con el servidor.';
     openModal('❌ Error de Autenticación', detail);
-    console.error('Error en el login:', error);
+    console.error('Detalle del error:', error.response ? error.response.data : error);
   } finally {
-    isLoading.value = false; // Oculta el spinner al terminar
+    isLoading.value = false;
   }
 }
 </script>

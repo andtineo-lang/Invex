@@ -5,13 +5,41 @@ from dateutil.relativedelta import relativedelta
 from .models import Usuario, Empresa, UsuarioEmpresa, Producto, Stock, Suscripcion, DiaImportante, Categoria
 
 # ---------------------------
-# SERIALIZADOR DE REGISTRO COMPLETO
+# SERIALIZADOR DE REGISTRO SIMPLE
+# ---------------------------
+class RegistroSerializer(serializers.Serializer):
+    """
+    Maneja un registro simple de usuario y empresa. Útil para flujos rápidos.
+    """
+    empresa_nombre = serializers.CharField(max_length=255)
+    email = serializers.EmailField()
+    password = serializers.CharField(write_only=True, min_length=6)
+
+    def create(self, validated_data):
+        empresa_nombre = validated_data['empresa_nombre']
+        email = validated_data['email']
+        password = validated_data['password']
+        usuario, created_u = Usuario.objects.get_or_create(email=email)
+        if created_u:
+            usuario.set_password(password)
+            usuario.save()
+        empresa, created_e = Empresa.objects.get_or_create(nombre=empresa_nombre)
+        if empresa.owner is None:
+            empresa.owner = usuario
+            empresa.save()
+            rol = 'admin'
+        else:
+            rol = 'viewer'
+        UsuarioEmpresa.objects.get_or_create(usuario=usuario, empresa=empresa, defaults={'rol': rol})
+        return {"usuario": usuario, "empresa": empresa, "rol": rol}
+
+# ---------------------------
+# SERIALIZADOR DE REGISTRO COMPLETO (DESPUÉS DEL PAGO)
 # ---------------------------
 class FullRegistrationSerializer(serializers.Serializer):
-    # ---------------------------
-   # Gestiona la validación y creación de un nuevo usuario, empresa y suscripción
-   # en una sola transacción después de un pago exitoso.
-   # ---------------------------
+    """
+    Gestiona la creación de un nuevo usuario, empresa y suscripción en una sola transacción.
+    """
     name = serializers.CharField(max_length=255)
     email = serializers.EmailField()
     password = serializers.CharField(write_only=True, min_length=8)
@@ -21,25 +49,18 @@ class FullRegistrationSerializer(serializers.Serializer):
     plan = serializers.CharField(max_length=50)
 
     def validate_email(self, value):
-         # ---------------------------
-       #  """ Valida que el email no esté ya en uso. """
-         # ---------------------------
         if Usuario.objects.filter(email=value).exists():
             raise serializers.ValidationError("Ya existe un usuario con este correo electrónico.")
         return value
 
     @transaction.atomic
     def create(self, validated_data):
-         # ---------------------------
-        # Crea el Usuario, la Empresa, la relación y la Suscripción de forma segura.
-         # ---------------------------
         # 1. Crear el Usuario
         user = Usuario.objects.create_user(
             email=validated_data['email'],
             password=validated_data['password'],
             nombre=validated_data['name']
         )
-        
         # 2. Crear la Empresa
         empresa = Empresa.objects.create(
             nombre=validated_data['company'],
@@ -47,25 +68,18 @@ class FullRegistrationSerializer(serializers.Serializer):
             rubro=validated_data['industry'],
             owner=user
         )
-
         # 3. Crear la relación Usuario-Empresa
         UsuarioEmpresa.objects.create(
             usuario=user,
             empresa=empresa,
             rol='admin'
         )
-        
         # 4. Crear la Suscripción
-        plan_map = {
-            'Plan Trimestral': '3m',
-            'Plan Semestral': '6m',
-            'Plan Anual': '1y',
-        }
+        plan_map = {'Plan Trimestral': '3m', 'Plan Semestral': '6m', 'Plan Anual': '1y'}
         plan_tipo = plan_map.get(validated_data['plan'])
-        
         if not plan_tipo:
             raise serializers.ValidationError("Tipo de plan no válido.")
-            
+        
         fecha_inicio = timezone.now().date()
         if plan_tipo == '3m':
             fecha_fin = fecha_inicio + relativedelta(months=+3)
@@ -80,7 +94,6 @@ class FullRegistrationSerializer(serializers.Serializer):
             fecha_fin=fecha_fin,
             pago_por=user
         )
-        
         return user
 
 # ---------------------------
@@ -89,18 +102,19 @@ class FullRegistrationSerializer(serializers.Serializer):
 class UsuarioSerializer(serializers.ModelSerializer):
     class Meta:
         model = Usuario
+        # --- CORRECCIÓN ---
+        # Se elimina 'mostrar_tutorial' de los campos.
         fields = ['id', 'email', 'nombre']
 
 class EmpresaSerializer(serializers.ModelSerializer):
     class Meta:
         model = Empresa
-        # Se añaden los nuevos campos 'rut' y 'rubro'
+        # Se incluyen los campos 'rut' y 'rubro'
         fields = ['id', 'nombre', 'rut', 'rubro', 'owner', 'fecha_creacion']
 
 class UsuarioEmpresaSerializer(serializers.ModelSerializer):
     usuario = UsuarioSerializer(read_only=True)
     empresa = EmpresaSerializer(read_only=True)
-
     class Meta:
         model = UsuarioEmpresa
         fields = ['usuario', 'empresa', 'rol']
@@ -110,18 +124,66 @@ class CategoriaSerializer(serializers.ModelSerializer):
         model = Categoria
         fields = '__all__'
 
+# --- Serializer de Productos y Stock (La versión avanzada) ---
+class StockWriteSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Stock
+        fields = ['stock_actual', 'stock_transito', 'ventas_proyectadas', 'demanda_estacional']
+
 class ProductoSerializer(serializers.ModelSerializer):
-    # Opcional: Mostrar el nombre de la categoría en lugar de solo su ID
-    categoria = serializers.StringRelatedField()
+    stock = serializers.SerializerMethodField()
+    inTransit = serializers.SerializerMethodField()
+    projectedSales = serializers.SerializerMethodField()
+    seasonal = serializers.SerializerMethodField()
+    categoria_nombre = serializers.CharField(source='categoria.nombre', read_only=True)
+    proyeccion_status = serializers.SerializerMethodField()
+    proyeccion_cantidad = serializers.SerializerMethodField()
+    stock_data = StockWriteSerializer(write_only=True)
 
     class Meta:
         model = Producto
-        fields = ['id', 'nombre', 'unidad_medida', 'categoria', 'empresa']
+        fields = [
+            'id', 'nombre', 'sku', 'categoria',
+            'stock', 'inTransit', 'projectedSales', 'seasonal', 'categoria_nombre',
+            'stock_data',
+            'proyeccion_status', 'proyeccion_cantidad'
+        ]
 
-class StockSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Stock
-        fields = '__all__'
+    def get_first_stock(self, obj):
+        return obj.stocks.first()
+
+    def get_stock(self, obj):
+        stock_obj = self.get_first_stock(obj); return stock_obj.stock_actual if stock_obj else 0
+    def get_inTransit(self, obj):
+        stock_obj = self.get_first_stock(obj); return stock_obj.stock_transito if stock_obj else 0
+    def get_projectedSales(self, obj):
+        stock_obj = self.get_first_stock(obj); return stock_obj.ventas_proyectadas if stock_obj else 0
+    def get_seasonal(self, obj):
+        stock_obj = self.get_first_stock(obj); return stock_obj.demanda_estacional if stock_obj else "Normal"
+    def get_proyeccion_status(self, obj):
+        stock_obj = self.get_first_stock(obj); return stock_obj.proyeccion_status if stock_obj else "N/A"
+    def get_proyeccion_cantidad(self, obj):
+        stock_obj = self.get_first_stock(obj); return stock_obj.proyeccion_cantidad_a_comprar if stock_obj else 0
+
+    def create(self, validated_data):
+        stock_data = validated_data.pop('stock_data')
+        request = self.context.get('request')
+        if not request or not hasattr(request, 'user'): raise serializers.ValidationError("Contexto de request no encontrado.")
+        relacion = request.user.relaciones.first()
+        if not relacion: raise serializers.ValidationError("El usuario no está asociado a ninguna empresa.")
+        producto = Producto.objects.create(empresa=relacion.empresa, **validated_data)
+        Stock.objects.create(producto=producto, **stock_data)
+        return producto
+
+    def update(self, instance, validated_data):
+        if 'stock_data' in validated_data:
+            stock_data = validated_data.pop('stock_data')
+            stock_instance = instance.stocks.first()
+            if stock_instance:
+                stock_serializer = StockWriteSerializer(stock_instance, data=stock_data, partial=True)
+                stock_serializer.is_valid(raise_exception=True)
+                stock_serializer.save()
+        return super().update(instance, validated_data)
 
 class SuscripcionSerializer(serializers.ModelSerializer):
     class Meta:
