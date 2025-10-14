@@ -37,6 +37,9 @@ class Usuario(AbstractBaseUser, PermissionsMixin):
     is_staff = models.BooleanField(default=False)
     date_joined = models.DateTimeField(default=timezone.now)
 
+    # 👇 CAMBIO AÑADIDO
+    mostrar_tutorial = models.BooleanField(default=True)
+
     objects = UsuarioManager()
 
     USERNAME_FIELD = 'email'
