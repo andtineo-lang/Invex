@@ -50,6 +50,10 @@ class Usuario(AbstractBaseUser, PermissionsMixin):
 # ---------------------------
 class Empresa(models.Model):
     nombre = models.CharField(max_length=255, unique=True)
+    # 👇 CAMPOS AÑADIDOS
+    rut = models.CharField(max_length=20, blank=True, null=True, unique=True)
+    rubro = models.CharField(max_length=255, blank=True)
+    # 👆
     fecha_creacion = models.DateTimeField(auto_now_add=True)
     owner = models.ForeignKey(
         Usuario,

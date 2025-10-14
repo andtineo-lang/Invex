@@ -2,9 +2,7 @@
   <div class="invex-landing">
     <Header />
 
-    <!-- Contenedor principal -->
     <div class="registro-container">
-      <!-- Progressbar -->
       <ul id="progressbar">
         <li :class="{ active: step >= 1 }">Cuenta</li>
         <li :class="{ active: step >= 2 }">Empresa</li>
@@ -13,9 +11,10 @@
         <li :class="{ active: step >= 5 }">Pago</li>
       </ul>
 
-      <!-- Step 1 -->
       <fieldset v-if="step === 1">
         <h2 class="fs-title">Crear tu cuenta</h2>
+        
+        <input type="text" v-model="form.name" placeholder="Nombre completo" required />
         <input type="email" v-model="form.email" placeholder="Correo electrónico" required />
 
         <div class="password-container">
@@ -50,7 +49,6 @@
         </p>
       </fieldset>
 
-      <!-- Step 2 -->
       <fieldset v-if="step === 2">
         <h2 class="fs-title">Datos de la Empresa</h2>
         <div class="input-group">
@@ -78,7 +76,6 @@
         </div>
       </fieldset>
 
-      <!-- Step 3 -->
       <fieldset v-if="step === 3">
         <h2 class="fs-title">Selecciona un plan</h2>
         <div class="plans-grid">
@@ -105,10 +102,10 @@
         </div>
       </fieldset>
 
-      <!-- Step 4: Confirmación ANTES del pago -->
       <fieldset v-if="step === 4">
         <h2 class="fs-title">Confirmación</h2>
         <div class="confirm-card">
+          <p><strong>Nombre:</strong> {{ form.name }}</p>
           <p><strong>Correo:</strong> {{ form.email }}</p>
           <p><strong>Empresa:</strong> {{ form.company }}</p>
           <p><strong>RUT:</strong> {{ form.rut }}</p>
@@ -123,7 +120,6 @@
         </div>
       </fieldset>
 
-      <!-- Step 5: Pantalla de Pago -->
       <fieldset v-if="step === 5">
         <h2 class="fs-title">Confirmar Pago</h2>
         <div class="payment-summary">
@@ -141,7 +137,6 @@
       </fieldset>
     </div>
 
-    <!-- Modal para errores -->
     <div v-if="showModal" class="modal-overlay">
       <div class="modal-box">
         <h2>{{ modalTitle }}</h2>
@@ -153,30 +148,29 @@
 </template>
 
 <script setup>
-import Header from '@/components/Header.vue'
-import { ref, reactive, computed } from 'vue'
-import { useRoute } from 'vue-router'
+import Header from '@/components/Header.vue';
+import { ref, reactive, computed } from 'vue';
+import { useRoute } from 'vue-router';
 
-const route = useRoute()
-
-const step = ref(1)
-const showModal = ref(false)
-const modalTitle = ref('')
-const modalMessage = ref('')
-const isLoading = ref(false)
-
-const showPassword = ref(false)
-const showConfirm = ref(false)
+const route = useRoute();
+const step = ref(1);
+const showModal = ref(false);
+const modalTitle = ref('');
+const modalMessage = ref('');
+const isLoading = ref(false);
+const showPassword = ref(false);
+const showConfirm = ref(false);
 
 const form = reactive({
+  name: '',
   email: '',
   password: '',
   confirmPassword: '',
   rut: '',
   company: '',
   industry: '',
-  plan: route.query.plan || ''
-})
+  plan: route.query.plan || '',
+});
 
 const handleRutInput = (event) => {
   let value = event.target.value.replace(/[^\dkK]/g, '');
@@ -191,7 +185,7 @@ const plans = [
   { name: 'Plan Trimestral', price: 299, duration: '3 meses', features: ['Hasta 1,000 productos', 'Análisis básico de IA', 'Reportes mensuales', 'Soporte por email'] },
   { name: 'Plan Semestral', price: 499, duration: '6 meses', features: ['Hasta 5,000 productos', 'IA avanzada predictiva', 'Reportes semanales', 'Soporte prioritario', 'Integraciones API'], popular: true },
   { name: 'Plan Anual', price: 899, duration: 'año', features: ['Productos ilimitados', 'IA empresarial completa', 'Reportes en tiempo real', 'Soporte 24/7', 'Consultoría personalizada'] }
-]
+];
 
 const selectedPlanPrice = computed(() => {
     const selectedPlan = plans.find(p => p.name === form.plan);
@@ -199,58 +193,41 @@ const selectedPlanPrice = computed(() => {
 });
 
 const openModal = (title, message) => {
-  modalTitle.value = title
-  modalMessage.value = message
-  showModal.value = true
-}
+  modalTitle.value = title;
+  modalMessage.value = message;
+  showModal.value = true;
+};
 
-const validarEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
-const validarPassword = (password) => /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/.test(password)
-const validarRut = (rut) => /^\d{1,2}(\.\d{3}){2}-[\dkK]$/.test(rut)
+const validarEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+const validarPassword = (password) => /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/.test(password);
+const validarRut = (rut) => /^\d{1,2}(\.\d{3}){2}-[\dkK]$/.test(rut);
 
 const nextStep = () => {
-  // Aquí puedes agregar las validaciones de cada paso si lo deseas
   if (step.value === 1) {
-    if (!form.email || !form.password || !form.confirmPassword) {
-      return openModal('⚠️ Campos incompletos', 'Por favor completa todos los campos.')
-    }
-    if (!validarEmail(form.email)) {
-      return openModal('📧 Correo inválido', 'Por favor ingresa un correo válido.')
-    }
-    if (!validarPassword(form.password)) {
-      return openModal('🔐 Contraseña inválida', 'Debe tener mínimo 8 caracteres, mayúscula, minúscula, número y carácter especial.')
-    }
-    if (form.password !== form.confirmPassword) {
-      return openModal('❌ Contraseñas diferentes', 'Las contraseñas no coinciden.')
-    }
+    if (!form.name || !form.email || !form.password || !form.confirmPassword) return openModal('⚠️ Campos incompletos', 'Por favor completa todos los campos.');
+    if (!validarEmail(form.email)) return openModal('📧 Correo inválido', 'Por favor ingresa un correo válido.');
+    if (!validarPassword(form.password)) return openModal('🔐 Contraseña inválida', 'Debe tener mínimo 8 caracteres, mayúscula, minúscula, número y carácter especial.');
+    if (form.password !== form.confirmPassword) return openModal('❌ Contraseñas diferentes', 'Las contraseñas no coinciden.');
   }
-
   if (step.value === 2) {
-    if (!form.rut || !form.company || !form.industry) {
-      return openModal('🏢 Datos incompletos', 'Por favor completa todos los datos de la empresa.')
-    }
-    if (!validarRut(form.rut)) {
-      return openModal('🆔 RUT inválido', 'El formato debe ser como 12.345.678-9.')
-    }
+    if (!form.rut || !form.company || !form.industry) return openModal('🏢 Datos incompletos', 'Por favor completa todos los datos de la empresa.');
+    if (!validarRut(form.rut)) return openModal('🆔 RUT inválido', 'El formato debe ser como 12.345.678-9.');
   }
-
-  if (step.value === 3 && !form.plan) { 
-    return openModal('📌 Selección requerida', 'Por favor selecciona un plan.') 
-  }
-
-  // Avanza al siguiente paso si no es el último
-  if (step.value < 5) step.value++
-}
+  if (step.value === 3 && !form.plan) return openModal('📌 Selección requerida', 'Por favor selecciona un plan.');
+  if (step.value < 5) step.value++;
+};
 
 const prevStep = () => {
-  if (step.value > 1) step.value--
-}
+  if (step.value > 1) step.value--;
+};
 
 const handlePayment = async () => {
   if (isLoading.value) return; 
   isLoading.value = true;
   
   try {
+    sessionStorage.setItem('pendingRegistrationData', JSON.stringify(form));
+
     const response = await fetch('http://127.0.0.1:5000/api/create-transaction', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -258,6 +235,7 @@ const handlePayment = async () => {
         buy_order: `bo_invex_${Date.now()}`,
         session_id: `sid_invex_${Date.now()}`,
         amount: selectedPlanPrice.value,
+        return_url: 'http://localhost:8080/pago/confirmacion' 
       }),
     });
 
@@ -280,6 +258,7 @@ const handlePayment = async () => {
   }
 };
 </script>
+
 
 <style scoped>
 /* Tus estilos existentes... */

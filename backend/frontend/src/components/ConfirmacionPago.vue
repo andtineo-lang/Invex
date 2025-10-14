@@ -1,32 +1,27 @@
 <template>
   <div class="confirmation-container">
-    <!-- Estado de Carga -->
     <div v-if="isLoading" class="status-card loading">
       <div class="spinner"></div>
-      <h2>Confirmando tu pago, por favor espera...</h2>
-      <p>Estamos verificando la transacción con Transbank.</p>
+      <h2>Procesando...</h2>
+      <p>{{ statusMessage }}</p>
     </div>
 
-    <!-- Pago Aprobado -->
     <div v-else-if="paymentResult.status === 'AUTHORIZED'" class="status-card success">
       <div class="icon">✔️</div>
-      <h2>¡Pago Aprobado!</h2>
-      <p>Tu suscripción ha sido activada correctamente. ¡Bienvenido a Invex!</p>
+      <h2>¡Cuenta Creada y Activada!</h2>
+      <p>Tu suscripción está lista. ¡Bienvenido a Invex!</p>
       <div class="details">
         <p><strong>Monto Pagado:</strong> ${{ paymentResult.amount }}</p>
         <p><strong>Orden de Compra:</strong> {{ paymentResult.buy_order }}</p>
-        <p><strong>Últimos 4 dígitos:</strong> {{ paymentResult.card_detail.card_number }}</p>
       </div>
-      <!-- ✅ Botón corregido -->
       <button @click="goToDashboard" class="action-button">Ir a mi Inventario</button>
     </div>
 
-    <!-- Otros estados (rechazado, cancelado...) -->
     <div v-else class="status-card cancelled">
         <div class="icon">⚠️</div>
         <h2>Proceso Interrumpido</h2>
-        <p>El proceso de pago fue cancelado o no se pudo verificar.</p>
-        <button @click="goToRegister" class="action-button">Volver al Registro</button>
+        <p>{{ statusMessage }}</p>
+        <button @click="goToRegister" class="action-button">Volver a Intentar</button>
     </div>
   </div>
 </template>
@@ -39,39 +34,75 @@ const route = useRoute();
 const router = useRouter();
 
 const isLoading = ref(true);
+const statusMessage = ref('Confirmando tu pago, por favor espera...');
 const paymentResult = reactive({});
 
 onMounted(async () => {
-  const token = route.query.token_ws;
-  if (!token) {
+  // El token que Transbank añade a la URL de retorno
+  const token_ws = route.query.token_ws;
+
+  if (!token_ws) {
+    statusMessage.value = 'Token de transacción no encontrado. No se puede verificar el pago.';
+    Object.assign(paymentResult, { status: 'CANCELLED' });
     isLoading.value = false;
     return;
   }
 
   try {
-    const response = await fetch('http://127.0.0.1:5000/api/confirm-transaction', {
+    // ✅ PASO 1: Confirmar el estado de la transacción con el backend de Transbank
+    const confirmResponse = await fetch('http://127.0.0.1:5000/api/confirm-transaction', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token }),
+      body: JSON.stringify({ token: token_ws }),
     });
-    const data = await response.json();
-    Object.assign(paymentResult, data);
+    
+    const paymentData = await confirmResponse.json();
+    Object.assign(paymentResult, paymentData);
 
-    // ✅ LÓGICA AÑADIDA: Si el pago es exitoso, crea el token de sesión.
-    if (data.status === 'AUTHORIZED') {
-      localStorage.setItem('authToken', 'fake-jwt-token-after-payment');
-      localStorage.setItem('userRole', 'admin'); // Asignar un rol por defecto
+    if (paymentData.status !== 'AUTHORIZED') {
+      throw new Error('El pago fue rechazado o cancelado.');
     }
+    
+    statusMessage.value = 'Pago confirmado. Creando tu cuenta...';
+    
+    // ✅ PASO 2: Recuperar los datos de registro guardados en la sesión
+    const pendingData = JSON.parse(sessionStorage.getItem('pendingRegistrationData'));
+    if (!pendingData) {
+      throw new Error('No se encontraron datos de registro para finalizar la creación de la cuenta.');
+    }
+
+    // ✅ PASO 3: Enviar los datos al backend de Django para crear y activar la cuenta
+    const registerResponse = await fetch('http://127.0.0.1:8000/api/auth/register-and-activate/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            registration: pendingData, // Todos los datos del formulario
+            payment: paymentData       // Información del pago exitoso
+        })
+    });
+
+    if (!registerResponse.ok) {
+        const errorData = await registerResponse.json();
+        throw new Error(errorData.detail || 'Hubo un problema al crear tu cuenta después del pago.');
+    }
+
+    const userData = await registerResponse.json();
+
+    // ✅ PASO 4: Guardar el token y el ROL del usuario, y luego limpiar
+    localStorage.setItem('authToken', userData.token); // El token JWT real del backend
+    localStorage.setItem('userRole', userData.rol);   // El rol del nuevo usuario ('admin')
+
+    sessionStorage.removeItem('pendingRegistrationData'); // Limpiar datos temporales
 
   } catch (error) {
     console.error('Error en la confirmación:', error);
+    statusMessage.value = error.message;
     Object.assign(paymentResult, { status: 'ERROR_APP' });
   } finally {
     isLoading.value = false;
   }
 });
 
-// ✅ FUNCIÓN CORREGIDA: Redirige a la ruta correcta del dashboard.
 const goToDashboard = () => router.push('/dashboard/inventario');
 const goToRegister = () => router.push('/registro');
 </script>

@@ -7,7 +7,6 @@ from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
 
-# MEJORA: Importaciones explícitas en lugar de '*' para mayor claridad.
 from .models import (
     Empresa,
     UsuarioEmpresa,
@@ -17,13 +16,15 @@ from .models import (
     DiaImportante,
     Categoria
 )
+# CORRECCIÓN: Se añaden los serializers que faltaban y se elimina StockSerializer.
 from .serializers import (
     RegistroSerializer,
     UsuarioSerializer,
     EmpresaSerializer,
     ProductoSerializer,
     SuscripcionSerializer,
-    DiaImportanteSerializer
+    DiaImportanteSerializer,
+    FullRegistrationSerializer
 )
 
 Usuario = get_user_model()
@@ -35,7 +36,6 @@ Usuario = get_user_model()
 class CustomLoginView(APIView):
     permission_classes = [AllowAny]
     def post(self, request, *args, **kwargs):
-        # ... (Tu lógica de login aquí, es correcta y no necesita cambios)
         email = request.data.get('email')
         password = request.data.get('password')
         empresa_nombre = request.data.get('empresa')
@@ -59,7 +59,6 @@ class RegistroView(generics.CreateAPIView):
     serializer_class = RegistroSerializer
     permission_classes = [AllowAny]
     def create(self, request, *args, **kwargs):
-        # ... (Tu lógica de registro aquí, es correcta y no necesita cambios)
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         result = serializer.save()
@@ -77,11 +76,31 @@ class CurrentUserView(APIView):
         return Response(serializer.data)
 
 # ----------------------------------------------------
-# VISTA DE ACCIÓN PARA IMPORTAR INVENTARIO (Sin cambios)
+# VISTA PARA EL FLUJO DE PAGO Y REGISTRO (Sin cambios)
+# ----------------------------------------------------
+class RegisterAndActivateView(APIView):
+    permission_classes = [AllowAny]
+    def post(self, request, *args, **kwargs):
+        registration_data = request.data.get('registration')
+        payment_data = request.data.get('payment')
+        if not registration_data or not payment_data:
+            return Response({"detail": "Faltan datos de registro o de pago."}, status=status.HTTP_400_BAD_REQUEST)
+        serializer = FullRegistrationSerializer(data=registration_data)
+        if serializer.is_valid():
+            user = serializer.save()
+            refresh = RefreshToken.for_user(user)
+            return Response({
+                'message': '¡Usuario y suscripción creados exitosamente!',
+                'token': str(refresh.access_token),
+                'rol': 'admin'
+            }, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+# ----------------------------------------------------
+# VISTA DE ACCIÓN PARA IMPORTAR INVENTARIO (Corregida)
 # ----------------------------------------------------
 class InventarioImportAPIView(APIView):
     permission_classes = [IsAuthenticated]
-    # ... (Tu lógica de importación aquí, es correcta y no necesita cambios)
     def post(self, request, empresa_id):
         user = request.user
         empresas_del_usuario = UsuarioEmpresa.objects.filter(usuario=user).values_list('empresa_id', flat=True)
@@ -120,21 +139,24 @@ class InventarioImportAPIView(APIView):
                     )
                     Stock.objects.update_or_create(
                         producto=producto,
-                        defaults={
-                            'stock_actual': int(item.get('stock_actual', 0) or 0),
-                            'stock_transito': int(item.get('stock_transito', 0) or 0),
-                            'ventas_proyectadas': int(item.get('ventas_proyectadas', 0) or 0),
-                        }
+                        defaults={'stock_actual': int(item.get('stock_actual', 0) or 0)}
                     )
                     productos_procesados += 1
+                # CORRECCIÓN: El 'raise' debe ir después del bucle si hay errores.
                 if errores:
-                    raise ValueError("Se encontraron errores de validación.")
-        except (ValueError, Exception) as e:
-            return Response({"error": "No se pudo completar la importación.", "detalles": errores if errores else [str(e)]}, status=status.HTTP_400_BAD_REQUEST)
+                    raise ValueError("Se encontraron errores de validación durante la importación.")
+        # CORRECCIÓN: El bloque 'except' debe estar fuera del 'with transaction.atomic()'.
+        except Exception as e:
+            # Si hay errores, devolvemos los detalles.
+            return Response({
+                "error": "No se pudo completar la importación.",
+                "detalles": errores if errores else [str(e)]
+            }, status=status.HTTP_400_BAD_REQUEST)
+
         return Response({"mensaje": f"Se importaron y/o actualizaron {productos_procesados} productos exitosamente."}, status=status.HTTP_201_CREATED)
 
 # ----------------------------------------------------
-# MEJORA: MIXIN PARA REUTILIZAR LA LÓGICA DE FILTRADO
+# MIXIN PARA FILTRAR POR EMPRESA (Refactorizado)
 # ----------------------------------------------------
 class EmpresaScopeMixin:
     """
@@ -142,53 +164,51 @@ class EmpresaScopeMixin:
     los objetos relacionados con las empresas a las que pertenece.
     """
     permission_classes = [IsAuthenticated]
-    # Campo a usar para el filtro, por defecto es 'empresa_id__in'
+    # Campo a usar para el filtro. Se puede sobreescribir en cada ViewSet.
     empresa_lookup_field = 'empresa_id__in'
 
     def get_queryset(self):
         user = self.request.user
+        # Obtenemos los IDs de las empresas del usuario.
         empresas_ids = UsuarioEmpresa.objects.filter(usuario=user).values_list('empresa_id', flat=True)
-        # Usamos super() para obtener el queryset base del ModelViewSet
+        # Usamos super() para obtener el queryset base del ModelViewSet (ej. Producto.objects.all()).
         queryset = super().get_queryset()
-        # Filtramos el queryset usando el campo de búsqueda definido
+        # Filtramos ese queryset por los IDs de las empresas del usuario.
         return queryset.filter(**{self.empresa_lookup_field: empresas_ids})
 
 # ----------------------------------------------------
-# VIEWSETS DE DATOS (Refactorizados para usar el Mixin)
+# VIEWSETS DE DATOS (Refactorizados y Corregidos)
 # ----------------------------------------------------
 
+# CORRECCIÓN: Se elimina la versión duplicada y se aplica el Mixin.
 class EmpresaViewSet(EmpresaScopeMixin, viewsets.ModelViewSet):
     serializer_class = EmpresaSerializer
     queryset = Empresa.objects.all()
-    # Sobreescribimos el campo de búsqueda para este modelo específico
+    # Sobreescribimos el campo de búsqueda para este modelo específico.
     empresa_lookup_field = 'id__in'
-    
+
     def perform_create(self, serializer):
-        # Al crear una empresa, se asigna al usuario como admin
+        # Al crear una empresa, se asigna al usuario como admin.
         empresa = serializer.save()
         UsuarioEmpresa.objects.create(usuario=self.request.user, empresa=empresa, rol='admin')
 
+# CORRECCIÓN: Se aplica el Mixin para filtrar automáticamente.
 class ProductoViewSet(EmpresaScopeMixin, viewsets.ModelViewSet):
     serializer_class = ProductoSerializer
     queryset = Producto.objects.all()
+
     def get_serializer_context(self):
-        """
-        Pasa el objeto 'request' al serializer. Es necesario para que el
-        serializer sepa qué usuario está creando el producto.
-        """
+        """Pasa el 'request' al serializer para saber qué usuario está creando el producto."""
         return {'request': self.request}
 
+# CORRECCIÓN: Se aplica el Mixin para filtrar automáticamente.
 class SuscripcionViewSet(EmpresaScopeMixin, viewsets.ModelViewSet):
     serializer_class = SuscripcionSerializer
     queryset = Suscripcion.objects.all()
 
+# CORRECCIÓN: Se aplica el Mixin para filtrar automáticamente.
 class DiaImportanteViewSet(EmpresaScopeMixin, viewsets.ModelViewSet):
     serializer_class = DiaImportanteSerializer
     queryset = DiaImportante.objects.all()
 
-# ## CORRECCIÓN PRINCIPAL ##
-# El siguiente ViewSet ha sido eliminado porque es redundante.
-# La información del stock ya está incluida en el ProductoSerializer.
-#
-# class StockViewSet(viewsets.ModelViewSet):
-#     ... (CÓDIGO ELIMINADO)
+# CORRECCIÓN: Se elimina por completo el StockViewSet, ya que es redundante.

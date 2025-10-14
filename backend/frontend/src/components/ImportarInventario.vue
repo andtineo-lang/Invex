@@ -1,60 +1,92 @@
 <template>
-  <div class="p-4 sm:p-6 md:p-8 bg-white rounded-lg shadow-md">
-    <header class="mb-6 border-b pb-4">
-      <h1 class="text-2xl sm:text-3xl font-bold text-gray-800">
-        Importar Inventario
-      </h1>
-      <p class="mt-1 text-sm text-gray-500">
-        Puedes agregar productos a tu inventario subiendo un archivo CSV o ingresándolos manualmente.
-      </p>
-    </header>
+  <div class="import-container">
+    
+      <h2>Importar Inventario</h2>
+      <p>Puedes subir tu inventario desde un archivo CSV o ingresarlo manualmente.</p>
+   
 
-    <div class="space-y-8">
-      <section>
-        <h2 class="text-xl font-semibold text-gray-700 mb-3">
-          Opción 1: Subir Archivo CSV
-        </h2>
-        <CsvUploader @upload-success="handleSuccess" />
-      </section>
+    <div class="mode-selector">
+      <button 
+        @click="modo = 'csv'" 
+        :class="['mode-button', { 'active': modo === 'csv' }]"
+      >
+        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+        Subir Archivo CSV
+      </button>
+      <button 
+        @click="modo = 'manual'" 
+        :class="['mode-button', { 'active': modo === 'manual' }]"
+      >
+        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+        Ingreso Manual
+      </button>
+    </div>
 
-      <div class="relative">
-        <div class="absolute inset-0 flex items-center" aria-hidden="true">
-          <div class="w-full border-t border-gray-300"></div>
-        </div>
-        <div class="relative flex justify-center">
-          <span class="bg-white px-2 text-sm text-gray-500">O</span>
-        </div>
-      </div>
-
-      <section>
-        <h2 class="text-xl font-semibold text-gray-700 mb-3">
-          Opción 2: Entrada Manual
-        </h2>
-        <ManualEntry @entry-success="handleSuccess" />
-      </section>
+    <div class="content-wrapper">
+      <CsvUploader v-if="modo === 'csv'" @upload-success="handleSuccess" />
+      <ManualEntry v-if="modo === 'manual'" @upload-success="handleSuccess" />
     </div>
   </div>
 </template>
 
 <script setup>
-// Importa los componentes necesarios para la página
-import CsvUploader from './CsvUploader.vue';
-import ManualEntry from './ManualEntry.vue';
+import { ref } from 'vue';
+import CsvUploader from '@/components/CsvUploader.vue';
+import ManualEntry from '@/components/ManualEntry.vue';
 
-// NOTA: Se ha eliminado 'useRouter' del import y la constante 'router',
-// ya que no se estaban utilizando en este componente.
+const modo = ref('csv');
 
-// Función para manejar una respuesta exitosa de cualquiera de los componentes hijos
 const handleSuccess = (message) => {
-  console.log('Operación exitosa:', message);
-  // Aquí podrías mostrar una notificación al usuario
+  console.log('Éxito:', message);
   alert(message || '¡El inventario se ha actualizado correctamente!');
-  
-  // Opcionalmente, podrías recargar la lista de inventario o redirigir,
-  // pero para eso necesitarías volver a importar y usar 'useRouter'.
 };
 </script>
 
 <style scoped>
-/* Puedes agregar estilos específicos para este componente si lo necesitas */
+.import-container {
+  max-width: 900px;
+  margin: 0 auto;
+}
+.header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+h2 {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #1a202c;
+}
+p {
+  color: #4a5568;
+  font-size: 1.1rem;
+}
+.mode-selector {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+.mode-button {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.75rem 1.5rem;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  background-color: #f1f5f9;
+  color: #475569;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+.mode-button:hover:not(.active) {
+  background-color: #e2e8f0;
+  color: #1e293b;
+}
+.mode-button.active {
+  background-color: #f0fdfa;
+  color: #0d9488;
+  border-color: #0d9488;
+  box-shadow: 0 4px 10px rgba(13, 148, 136, 0.2);
+  transform: translateY(-2px);
+}
 </style>
