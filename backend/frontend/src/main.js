@@ -5,6 +5,7 @@ import App from './App.vue'
 import router from './router'
 import vClickOutside from 'v-click-outside'
 import axios from 'axios' // <-- 1. Importa axios
+import { createPinia } from 'pinia'
 
 // Importar CSS global
 import './assets/global.css'
@@ -24,7 +25,7 @@ if (accessToken) {
 
 // 1. Crea la app y guárdala en una variable
 const app = createApp(App)
-
+app.use(createPinia())
 // 2. Usa los plugins que necesites
 app.use(router)
 app.use(vClickOutside)

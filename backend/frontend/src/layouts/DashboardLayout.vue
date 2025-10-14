@@ -87,9 +87,13 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import api from '../api/axios'; // <-- CAMBIO CLAVE: Importa la instancia configurada
+// 👇 1. Se importa la instancia de Axios y el store de Pinia
+import axiosInstance from '@/api/axios.js'; 
+import { useAuthStore } from '@/stores/auth.js';
 
 const router = useRouter();
+const authStore = useAuthStore(); // 👈 2. Se inicializa el store
+
 const menuOpen = ref(false);
 const perfilOpen = ref(false);
 
@@ -99,7 +103,6 @@ const user = ref({
   rol: ''
 });
 
-// (navItems y otras funciones se mantienen igual)
 const navItems = [
   { name: 'Inventario', path: '/dashboard/inventario' },
   { name: 'Importar', path: '/dashboard/inventario/importar' },
@@ -111,10 +114,12 @@ const navItems = [
 
 const fetchUserData = async () => {
   try {
-    // CAMBIO CLAVE: Usa 'api' para la llamada
-    const response = await api.get('/auth/user/');
+    // 👇 3. CORRECCIÓN: La URL correcta es '/users/me/', sin '/auth/'
+    const response = await axiosInstance.get('/users/me/');
     const userData = response.data;
-    const userRole = localStorage.getItem('userRole') || 'Invitado';
+    
+    // Leemos el rol desde el store de Pinia, que es más fiable
+    const userRole = authStore.userRole || 'Invitado';
 
     user.value = {
       nombre: userData.nombre || 'Usuario',
@@ -123,7 +128,8 @@ const fetchUserData = async () => {
     };
   } catch (error) {
     console.error("Error al obtener datos del usuario:", error);
-    logout();
+    // Si falla, es mejor desloguear usando la acción del store
+    logout(); 
   }
 };
 
@@ -137,8 +143,8 @@ const navigateTo = (path) => {
 };
 
 const logout = () => {
-  localStorage.removeItem('authToken');
-  localStorage.removeItem('userRole');
+  // 👇 4. CORRECCIÓN: Se usa la acción del store para un logout limpio
+  authStore.logout();
   router.push('/login');
 };
 </script>

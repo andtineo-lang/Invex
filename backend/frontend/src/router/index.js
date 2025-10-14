@@ -1,19 +1,17 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { useAuthStore } from '../stores/auth.js' // 👈 1. Importa el store
 
 // --- 1. LAYOUTS ---
-// Importa los dos layouts principales de tu aplicación.
 import PublicLayout from '../layouts/PublicLayout.vue'
 import DashboardLayout from '../layouts/DashboardLayout.vue'
 
 // --- 2. VISTAS PÚBLICAS ---
-// Estas son las páginas que usarán el PublicLayout.
 import Principal from '../components/principal.vue'
 import Login from '../components/Login.vue'
 import Registro from '../components/Registro.vue'
 import ConfirmacionPago from '../components/ConfirmacionPago.vue'
 
 // --- 3. VISTAS DEL DASHBOARD ---
-// Estas son las páginas que usarán el DashboardLayout.
 import Inventario from '../components/inventario.vue'
 import ImportarInventario from '../components/ImportarInventario.vue'
 import Usuarios from '../components/usuarios.vue'
@@ -26,7 +24,7 @@ const routes = [
   // --- GRUPO DE RUTAS PÚBLICAS ---
   {
     path: '/',
-    component: PublicLayout, // Todas las rutas hijas se renderizarán dentro de PublicLayout
+    component: PublicLayout,
     children: [
       { path: '', name: 'Principal', component: Principal },
       { path: 'login', name: 'Login', component: Login },
@@ -38,7 +36,7 @@ const routes = [
   // --- GRUPO DE RUTAS PRIVADAS (DASHBOARD) ---
   {
     path: '/dashboard',
-    component: DashboardLayout, // Todas las rutas hijas se renderizarán dentro de DashboardLayout
+    component: DashboardLayout,
     meta: { requiresAuth: true }, // Protege todo este grupo
     children: [
       { path: '', redirect: '/dashboard/inventario' }, // Redirección por defecto
@@ -57,14 +55,18 @@ const router = createRouter({
   routes,
 })
 
-// --- 4. GUARDIÁN DE NAVEGACIÓN (SEGURIDAD) ---
+// --- 4. GUARDIÁN DE NAVEGACIÓN (CONECTADO A PINIA) ---
 router.beforeEach((to, from, next) => {
-  const isAuthenticated = !!localStorage.getItem('authToken');
-  const userRole = localStorage.getItem('userRole');
+  // 👈 2. Obtiene una instancia del store DENTRO del guardián
+  const authStore = useAuthStore()
+
+  // 👈 3. Lee el estado de autenticación y el rol DESDE EL STORE
+  const isAuthenticated = authStore.isAuthenticated;
+  const userRole = authStore.userRole;
 
   // Si la ruta requiere autenticación y no hay token, redirige a login.
   if (to.meta.requiresAuth && !isAuthenticated) {
-    return next('/login');
+    return next({ name: 'Login' }); // Usar el nombre de la ruta es más robusto
   }
 
   // Si la ruta requiere un rol específico y el usuario no lo tiene, redirige al inventario.

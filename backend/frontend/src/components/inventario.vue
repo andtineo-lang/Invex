@@ -193,9 +193,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import axios from 'axios'
-
-const API_URL = 'http://127.0.0.1:8000/api/productos/'
+import axiosInstance from '@/api/axios.js';
 
 // --- ESTADO DEL COMPONENTE ---
 const products = ref([])
@@ -212,7 +210,7 @@ async function fetchProducts() {
   isLoading.value = true
   errorMessage.value = null
   try {
-    const response = await axios.get(API_URL)
+    const response = await axiosInstance.get('/productos/')
     products.value = response.data.map(p => ({
       id: p.id,
       name: p.nombre,
@@ -226,7 +224,7 @@ async function fetchProducts() {
     }));
   } catch (error) {
     console.error("Error al obtener productos:", error)
-    errorMessage.value = "No se pudieron cargar los productos. Asegúrate de haber iniciado sesión."
+    errorMessage.value = "No se pudieron cargar los productos. Por favor, intenta recargar la página."
   } finally {
     isLoading.value = false
   }
@@ -244,7 +242,7 @@ async function addProduct() {
     }
   }
   try {
-    await axios.post(API_URL, payload)
+    await axiosInstance.post('/productos/', payload)
     await fetchProducts()
     showAddModal.value = false
     newProduct.value = { name: '', sku: '', stock: 0, projectedSales: 0 }
@@ -257,7 +255,7 @@ async function addProduct() {
 async function deleteProduct(productId) {
   if (!confirm('¿Estás seguro de que quieres eliminar este producto?')) return
   try {
-    await axios.delete(`${API_URL}${productId}/`)
+    await axiosInstance.delete(`/productos/${productId}/`)
     await fetchProducts()
   } catch (error) {
     console.error("Error al eliminar producto:", error)
@@ -281,7 +279,7 @@ async function updateProduct() {
     }
   }
   try {
-    await axios.patch(`${API_URL}${editingProduct.value.id}/`, payload)
+    await axiosInstance.patch(`/productos/${editingProduct.value.id}/`, payload)
     await fetchProducts()
     showEditModal.value = false
   } catch (error) {
