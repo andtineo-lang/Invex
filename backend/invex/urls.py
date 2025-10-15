@@ -13,7 +13,6 @@ from .views import (
     ProductoViewSet,
     RegisterAndActivateView,
     RegistroView,
-    StockViewSet,
     SuscripcionViewSet,
 )
 
