@@ -1,18 +1,20 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import (
-    # Se importan todas las vistas necesarias de ambos archivos
-    RegistroView,
-    CustomLoginView,
-    CurrentUserView,
-    RegisterAndActivateView,
+    # Se incluyen todas las vistas de ambas versiones para no perder nada.
     CrearUsuarioEmpresaView,
     CurrentEmpresaView,
-    InventarioImportAPIView,
-    EmpresaViewSet,
-    ProductoViewSet,
-    SuscripcionViewSet,
+    CurrentUserView,
+    CustomLoginView,
     DiaImportanteViewSet,
+    EmpresaViewSet,
+    InventarioImportAPIView,
+    MarcarTutorialVistoView,
+    ProductoViewSet,
+    RegisterAndActivateView,
+    RegistroView,
+    StockViewSet,
+    SuscripcionViewSet,
 )
 
 # Router para ViewSets (operaciones CRUD)
@@ -28,8 +30,12 @@ urlpatterns = [
     path('auth/registro/', RegistroView.as_view(), name='registro'),
     path('auth/login/', CustomLoginView.as_view(), name='custom-login'),
     path('auth/register-and-activate/', RegisterAndActivateView.as_view(), name='register-and-activate'),
-    path('users/me/', CurrentUserView.as_view(), name='current-user'), # Ruta corregida y estandarizada
     
+    # Se mantiene la ruta estandarizada de 'main' (/users/me/) porque el frontend ya la usa
+    path('users/me/', CurrentUserView.as_view(), name='current-user'),
+    
+    # Se añade tu nueva ruta para que el tutorial funcione
+    path('auth/marcar-tutorial-visto/', MarcarTutorialVistoView.as_view(), name='marcar-tutorial-visto'),
 
     # --- Rutas de Gestión de Usuarios y Empresa ---
     path('usuarios/crear/', CrearUsuarioEmpresaView.as_view(), name='crear-usuario-empresa'),

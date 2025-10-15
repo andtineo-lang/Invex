@@ -108,7 +108,7 @@ const goToRegister = () => router.push('/registro');
 </script>
 
 <style scoped>
-/* Tus estilos existentes... */
+
 .confirmation-container { display: flex; justify-content: center; align-items: center; min-height: 100vh; background-color: #f9fafb; padding: 2rem; }
 .status-card { background: white; padding: 2.5rem 3rem; border-radius: 1rem; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1); text-align: center; max-width: 500px; width: 100%; }
 .icon { font-size: 3.5rem; margin-bottom: 1rem; }
