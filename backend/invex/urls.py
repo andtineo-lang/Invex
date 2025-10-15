@@ -11,7 +11,6 @@ from .views import (
     InventarioImportAPIView,
     EmpresaViewSet,
     ProductoViewSet,
-    StockViewSet, # Se mantiene por si es necesaria en otras partes
     SuscripcionViewSet,
     DiaImportanteViewSet,
     MarcarTutorialVistoView, # Esencial para tu nueva funcionalidad de tutorial

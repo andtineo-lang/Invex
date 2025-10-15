@@ -88,15 +88,13 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-
-// ✅ COMBINACIÓN: Se mantienen TODAS las importaciones necesarias
-import axiosInstance from '@/api/axios.js'; // La nueva forma de llamar a la API
-import { useAuthStore } from '@/stores/auth.js'; // El nuevo manejador de sesión
-import Shepherd from 'shepherd.js'; // Tu librería para el tutorial
-import 'shepherd.js/dist/css/shepherd.css'; // Estilos del tutorial
+import axiosInstance from '@/api/axios.js';
+import { useAuthStore } from '@/stores/auth.js';
+import Shepherd from 'shepherd.js';
+import 'shepherd.js/dist/css/shepherd.css';
 
 const router = useRouter();
-const authStore = useAuthStore(); // Se inicializa el manejador de sesión
+const authStore = useAuthStore();
 
 const menuOpen = ref(false);
 const perfilOpen = ref(false);
@@ -116,7 +114,6 @@ const navItems = [
   { name: 'Configuración', path: '/dashboard/configuracion' }
 ];
 
-// ✅ SE MANTIENE: Toda tu lógica para el tutorial está aquí
 const iniciarTutorial = (rol) => {
   const tour = new Shepherd.Tour({
     useModalOverlay: true,
@@ -132,8 +129,7 @@ const iniciarTutorial = (rol) => {
     next: { text: 'Siguiente', action: tour.next },
     finish: { text: '¡Entendido!', action: tour.complete }
   };
-  
-  // (Aquí va todo tu código 'switch (rol)' completo, no lo incluyo por brevedad)
+
   switch (rol) {
     case 'admin':
       tour.addStep({
@@ -147,37 +143,36 @@ const iniciarTutorial = (rol) => {
         attachTo: { element: '#nav-button-inventario', on: 'bottom' },
         buttons: [buttons.back, buttons.next]
       });
-      // ... resto de los pasos del tutorial de admin
-       tour.addStep({
-        title: 'Importar Datos',
-        text: 'Usa esta potente herramienta para cargar masivamente tu inventario desde un archivo (como un Excel o CSV). ¡Ahorra horas de trabajo!',
-        attachTo: { element: '#nav-button-importar', on: 'bottom' },
-        buttons: [buttons.back, buttons.next]
-      });
-       tour.addStep({
-        title: 'Proyecciones de Demanda',
-        text: 'Anticípate al futuro. En esta sección, el sistema analiza tus datos para predecir las ventas y ayudarte a evitar quiebres de stock.',
-        attachTo: { element: '#nav-button-proyecciones', on: 'bottom' },
-        buttons: [buttons.back, buttons.next]
-      });
-      tour.addStep({
-        title: 'Reportes Detallados',
-        text: 'Genera informes clave sobre el rendimiento de tus productos, valor de inventario y mucho más para tomar decisiones informadas.',
-        attachTo: { element: '#nav-button-reportes', on: 'bottom' },
-        buttons: [buttons.back, buttons.next]
-      });
-      tour.addStep({
-        title: 'Administración de Usuarios',
-        text: 'Aquí es donde gestionas a tu equipo. Puedes <strong>agregar, eliminar o buscar a tus trabajadores y editar sus permisos</strong>.',
-        attachTo: { element: '#nav-button-usuarios', on: 'bottom' },
-        buttons: [buttons.back, buttons.next]
-      });
-      tour.addStep({
-        title: 'Configuración del Sistema',
-        text: 'Esta es una sección clave. Aquí puedes agregar <strong>Fechas Especiales</strong> (como Navidad o Cyber Day) para que el sistema ajuste las proyecciones automáticamente. También puedes definir parámetros avanzados como el <strong>Horizonte de Pronóstico</strong> y tu <strong>Nivel de Stock de Seguridad</strong>.',
-        attachTo: { element: '#nav-button-configuración', on: 'bottom' },
-        buttons: [buttons.back, buttons.finish]
-      });
+      tour.addStep({
+        title: 'Importar Datos',
+        text: 'Usa esta potente herramienta para cargar masivamente tu inventario desde un archivo (como un Excel o CSV). ¡Ahorra horas de trabajo!',
+        attachTo: { element: '#nav-button-importar', on: 'bottom' },
+        buttons: [buttons.back, buttons.next]
+      });
+      tour.addStep({
+        title: 'Proyecciones de Demanda',
+        text: 'Anticípate al futuro. En esta sección, el sistema analiza tus datos para predecir las ventas y ayudarte a evitar quiebres de stock.',
+        attachTo: { element: '#nav-button-proyecciones', on: 'bottom' },
+        buttons: [buttons.back, buttons.next]
+      });
+      tour.addStep({
+        title: 'Reportes Detallados',
+        text: 'Genera informes clave sobre el rendimiento de tus productos, valor de inventario y mucho más para tomar decisiones informadas.',
+        attachTo: { element: '#nav-button-reportes', on: 'bottom' },
+        buttons: [buttons.back, buttons.next]
+      });
+      tour.addStep({
+        title: 'Administración de Usuarios',
+        text: 'Aquí es donde gestionas a tu equipo. Puedes <strong>agregar, eliminar o buscar a tus trabajadores y editar sus permisos</strong>.',
+        attachTo: { element: '#nav-button-usuarios', on: 'bottom' },
+        buttons: [buttons.back, buttons.next]
+      });
+      tour.addStep({
+        title: 'Configuración del Sistema',
+        text: 'Esta es una sección clave. Aquí puedes agregar <strong>Fechas Especiales</strong> (como Navidad o Cyber Day) para que el sistema ajuste las proyecciones automáticamente. También puedes definir parámetros avanzados como el <strong>Horizonte de Pronóstico</strong> y tu <strong>Nivel de Stock de Seguridad</strong>.',
+        attachTo: { element: '#nav-button-configuración', on: 'bottom' },
+        buttons: [buttons.back, buttons.finish]
+      });
       break;
     case 'worker':
       tour.addStep({
@@ -191,19 +186,17 @@ const iniciarTutorial = (rol) => {
         attachTo: { element: '#nav-button-inventario', on: 'bottom' },
         buttons: [buttons.back, buttons.next]
       });
-      // ... resto de los pasos del tutorial de worker
       tour.addStep({
-            title: 'Importación Rápida',
-            text: 'Si necesitas registrar una gran cantidad de productos nuevos, aquí podrás hacerlo cargando un archivo.',
-            attachTo: { element: '#nav-button-importar', on: 'bottom' },
-            buttons: [buttons.back, buttons.finish]
-        });
+        title: 'Importación Rápida',
+        text: 'Si necesitas registrar una gran cantidad de productos nuevos, aquí podrás hacerlo cargando un archivo.',
+        attachTo: { element: '#nav-button-importar', on: 'bottom' },
+        buttons: [buttons.back, buttons.finish]
+      });
       break;
   }
 
   const onTourEnd = async () => {
     try {
-      // ❗️ CORRECCIÓN IMPORTANTE: Usamos la nueva instancia 'axiosInstance'
       await axiosInstance.post('/auth/marcar-tutorial-visto/');
     } catch (error) {
       console.error("Error al marcar el tutorial como visto:", error);
@@ -218,7 +211,6 @@ const iniciarTutorial = (rol) => {
   }
 };
 
-// ✅ SE MANTIENE: La versión mejorada de 'main' para obtener datos del usuario
 const fetchUserData = async () => {
   try {
     const response = await axiosInstance.get('/users/me/');
@@ -250,7 +242,6 @@ const navigateTo = (path) => {
   router.push(path);
 };
 
-// ✅ SE MANTIENE: La versión mejorada de 'main' para cerrar sesión
 const logout = () => {
   authStore.logout();
   router.push('/login');
@@ -311,64 +302,48 @@ const logout = () => {
 }
 
 /* Estilos para que Shepherd.js coincida con la paleta de colores de Invex */
-
-/* Flecha que apunta al elemento */
 .shepherd-arrow::before {
   background-color: #ffffff;
 }
-
-/* Contenedor principal del pop-up */
 .shepherd-element {
   background: #ffffff;
   border-radius: 0.5rem;
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-  border: 1px solid #e5e7eb; /* Gray-200 */
+  border: 1px solid #e5e7eb;
 }
-
-/* Cabecera del pop-up */
 .shepherd-header {
   padding: 1rem 1rem 0.75rem;
-  background-color: #f9fafb; /* Gray-50 */
+  background-color: #f9fafb;
   border-top-left-radius: 0.5rem;
   border-top-right-radius: 0.5rem;
-  border-bottom: 1px solid #e5e7eb; /* Gray-200 */
+  border-bottom: 1px solid #e5e7eb;
 }
-
-/* Título del paso del tutorial */
 .shepherd-title {
-  color: #0d9488; /* Teal-600 (color principal de tu marca) */
+  color: #0d9488;
   font-weight: 700;
   font-size: 1.125rem;
 }
-
-/* Icono para cerrar (la 'X') */
 .shepherd-cancel-icon {
-  color: #9ca3af; /* Gray-400 */
+  color: #9ca3af;
   transition: color 0.2s;
 }
 .shepherd-cancel-icon:hover {
-  color: #374151; /* Gray-700 */
+  color: #374151;
 }
-
-/* Texto principal del cuerpo */
 .shepherd-text {
   padding: 1.25rem;
-  color: #374151; /* Gray-700 */
+  color: #374151;
   font-size: 0.95rem;
   line-height: 1.6;
 }
 .shepherd-text strong {
-  color: #0f766e; /* Teal-700 */
+  color: #0f766e;
 }
-
-/* Pie de página donde van los botones */
 .shepherd-footer {
   padding: 0 1.25rem 1.25rem;
 }
-
-/* Botón principal (Siguiente, Finalizar) */
 .shepherd-button {
-  background: #0d9488; /* Teal-600 */
+  background: #0d9488;
   color: white;
   padding: 0.6rem 1.2rem;
   border-radius: 0.375rem;
@@ -379,18 +354,14 @@ const logout = () => {
   letter-spacing: 0.05em;
   border: none;
 }
-
-/* Hover del botón principal */
 .shepherd-button:not(.shepherd-button-secondary):hover {
-  background: #0f766e; /* Teal-700 */
+  background: #0f766e;
 }
-
-/* Botón secundario (Atrás) */
 .shepherd-button.shepherd-button-secondary {
-  background: #e5e7eb; /* Gray-200 */
-  color: #374151; /* Gray-700 */
+  background: #e5e7eb;
+  color: #374151;
 }
 .shepherd-button.shepherd-button-secondary:hover {
-  background: #d1d5db; /* Gray-300 */
+  background: #d1d5db;
 }
 </style>
