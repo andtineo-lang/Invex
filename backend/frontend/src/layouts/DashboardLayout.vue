@@ -174,6 +174,7 @@ const iniciarTutorial = (rol) => {
         buttons: [buttons.back, buttons.finish]
       });
       break;
+    
     case 'worker':
       tour.addStep({
         title: '¡Hola y bienvenido!',
@@ -309,41 +310,41 @@ const logout = () => {
   background: #ffffff;
   border-radius: 0.5rem;
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-  border: 1px solid #e5e7eb;
+  border: 1px solid #e5e7eb; /* Gray-200 */
 }
 .shepherd-header {
   padding: 1rem 1rem 0.75rem;
-  background-color: #f9fafb;
+  background-color: #f9fafb; /* Gray-50 */
   border-top-left-radius: 0.5rem;
   border-top-right-radius: 0.5rem;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid #e5e7eb; /* Gray-200 */
 }
 .shepherd-title {
-  color: #0d9488;
+  color: #0d9488; /* Teal-600 (color principal de tu marca) */
   font-weight: 700;
   font-size: 1.125rem;
 }
 .shepherd-cancel-icon {
-  color: #9ca3af;
+  color: #9ca3af; /* Gray-400 */
   transition: color 0.2s;
 }
 .shepherd-cancel-icon:hover {
-  color: #374151;
+  color: #374151; /* Gray-700 */
 }
 .shepherd-text {
   padding: 1.25rem;
-  color: #374151;
+  color: #374151; /* Gray-700 */
   font-size: 0.95rem;
   line-height: 1.6;
 }
 .shepherd-text strong {
-  color: #0f766e;
+  color: #0f766e; /* Teal-700 */
 }
 .shepherd-footer {
   padding: 0 1.25rem 1.25rem;
 }
 .shepherd-button {
-  background: #0d9488;
+  background: #0d9488; /* Teal-600 */
   color: white;
   padding: 0.6rem 1.2rem;
   border-radius: 0.375rem;
@@ -355,13 +356,13 @@ const logout = () => {
   border: none;
 }
 .shepherd-button:not(.shepherd-button-secondary):hover {
-  background: #0f766e;
+  background: #0f766e; /* Teal-700 */
 }
 .shepherd-button.shepherd-button-secondary {
-  background: #e5e7eb;
-  color: #374151;
+  background: #e5e7eb; /* Gray-200 */
+  color: #374151; /* Gray-700 */
 }
 .shepherd-button.shepherd-button-secondary:hover {
-  background: #d1d5db;
+  background: #d1d5db; /* Gray-300 */
 }
 </style>

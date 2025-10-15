@@ -102,7 +102,6 @@ class FullRegistrationSerializer(serializers.Serializer):
 class UsuarioSerializer(serializers.ModelSerializer):
     class Meta:
         model = Usuario
-
         # 👇 AÑADE 'mostrar_tutorial' A LOS CAMPOS
         fields = ['id', 'email', 'nombre', 'mostrar_tutorial'] 
 

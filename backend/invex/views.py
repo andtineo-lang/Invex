@@ -1,5 +1,4 @@
 # invex/views.py
-
 import re
 from unidecode import unidecode
 from django.db import transaction
@@ -21,7 +20,6 @@ from .models import (
     Categoria
 )
 from .serializers import (
-    # ✅ SE INCLUYEN TODOS LOS SERIALIZERS NECESARIOS DE AMBAS VERSIONES
     RegistroSerializer,
     UsuarioSerializer,
     EmpresaSerializer,
@@ -36,7 +34,6 @@ Usuario = get_user_model()
 # ----------------------------------------------------
 # SECCIÓN DE AUTENTICACIÓN Y PERFIL
 # ----------------------------------------------------
-
 class CustomLoginView(APIView):
     permission_classes = [AllowAny]
     def post(self, request, *args, **kwargs):
@@ -63,7 +60,6 @@ class CustomLoginView(APIView):
         refresh = RefreshToken.for_user(user)
         return Response({'refresh': str(refresh), 'access': str(refresh.access_token), 'rol': user_role})
 
-# ✅ SE MANTIENE: La vista de registro simple de 'main'
 class RegistroView(generics.CreateAPIView):
     serializer_class = RegistroSerializer
     permission_classes = [AllowAny]
@@ -95,7 +91,6 @@ class CurrentEmpresaView(APIView):
         serializer = EmpresaSerializer(empresa)
         return Response(serializer.data)
 
-# ✅ SE MANTIENE: Tu vista para que el tutorial funcione
 class MarcarTutorialVistoView(APIView):
     permission_classes = [IsAuthenticated]
     def post(self, request):
@@ -128,7 +123,7 @@ class RegisterAndActivateView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 # ----------------------------------------------------
-# SECCIÓN DE GESTIÓN DE USUARIOS (DE TU VERSIÓN)
+# SECCIÓN DE GESTIÓN DE USUARIOS
 # ----------------------------------------------------
 def generar_email_unico(nombre_completo, nombre_empresa):
     base_usuario = unidecode(nombre_completo).lower()
@@ -147,7 +142,6 @@ def generar_email_unico(nombre_completo, nombre_empresa):
 def generar_password_temporal(longitud=12):
     return get_random_string(longitud)
 
-# ✅ SE MANTIENE: Tu vista para crear nuevos usuarios en una empresa
 class CrearUsuarioEmpresaView(APIView):
     permission_classes = [IsAuthenticated]
     def post(self, request, *args, **kwargs):
@@ -184,7 +178,7 @@ class CrearUsuarioEmpresaView(APIView):
                 'role': rol_nuevo_usuario
             }, status=status.HTTP_201_CREATED)
         except Exception as e:
-            return Response({"error": f"Ocurrió un error inesperado al crear el usuario: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({"error": f"Ocurrió un error inesperado: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 # ----------------------------------------------------
 # VISTA DE ACCIÓN PARA IMPORTAR INVENTARIO
@@ -192,11 +186,63 @@ class CrearUsuarioEmpresaView(APIView):
 class InventarioImportAPIView(APIView):
     permission_classes = [IsAuthenticated]
     def post(self, request, empresa_id):
-        # (Aquí va la lógica completa de la importación que tenías en tu versión)
-        pass # Se omite por brevedad, pero debe estar la lógica completa
+        user = request.user
+        empresas_del_usuario = UsuarioEmpresa.objects.filter(usuario=user).values_list('empresa_id', flat=True)
+        if empresa_id not in empresas_del_usuario:
+            return Response({"error": "No tienes permiso para acceder a esta empresa."}, status=status.HTTP_403_FORBIDDEN)
+        
+        data = request.data
+        if not isinstance(data, list) or not data:
+            return Response({"error": "Los datos deben ser una lista de productos."}, status=status.HTTP_400_BAD_REQUEST)
+        
+        errores = []
+        productos_procesados = 0
+        try:
+            with transaction.atomic():
+                empresa = Empresa.objects.get(pk=empresa_id)
+                for i, item in enumerate(data):
+                    nombre_producto = item.get('nombre')
+                    if not nombre_producto:
+                        errores.append(f"Fila {i+1}: El nombre del producto es obligatorio.")
+                        continue
+                    
+                    nombre_categoria = item.get('categoria')
+                    categoria_obj = None
+                    if nombre_categoria and nombre_categoria.strip():
+                        categoria_obj, _ = Categoria.objects.get_or_create(
+                            empresa=empresa,
+                            nombre__iexact=nombre_categoria.strip(),
+                            defaults={'nombre': nombre_categoria.strip()}
+                        )
+
+                    producto, _ = Producto.objects.update_or_create(
+                        empresa=empresa,
+                        nombre__iexact=nombre_producto.strip(),
+                        defaults={
+                            'nombre': nombre_producto.strip(),
+                            'unidad_medida': item.get('unidad_medida', 'unidades'),
+                            'categoria': categoria_obj
+                        }
+                    )
+
+                    Stock.objects.update_or_create(
+                        producto=producto,
+                        defaults={'stock_actual': int(item.get('stock_actual', 0) or 0)}
+                    )
+                    productos_procesados += 1
+                
+                if errores:
+                    raise ValueError("Se encontraron errores de validación.")
+
+        except Empresa.DoesNotExist:
+            return Response({"error": "Empresa no encontrada."}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"error": "No se pudo completar la importación.", "detalles": errores or [str(e)]}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response({"mensaje": f"Se importaron y/o actualizaron {productos_procesados} productos exitosamente."}, status=status.HTTP_201_CREATED)
 
 # ----------------------------------------------------
-# MIXIN PARA FILTRAR POR EMPRESA (LA MEJORA DE 'MAIN')
+# MIXIN PARA FILTRAR POR EMPRESA
 # ----------------------------------------------------
 class EmpresaScopeMixin:
     permission_classes = [IsAuthenticated]
@@ -212,24 +258,24 @@ class EmpresaScopeMixin:
 class EmpresaViewSet(EmpresaScopeMixin, viewsets.ModelViewSet):
     serializer_class = EmpresaSerializer
     queryset = Empresa.objects.all()
-    empresa_lookup_field = 'id__in' # El campo a filtrar en el modelo Empresa
+    empresa_lookup_field = 'id__in'
     def perform_create(self, serializer):
-        empresa = serializer.save()
+        empresa = serializer.save(owner=self.request.user)
         UsuarioEmpresa.objects.create(usuario=self.request.user, empresa=empresa, rol='admin')
 
 class ProductoViewSet(EmpresaScopeMixin, viewsets.ModelViewSet):
     serializer_class = ProductoSerializer
     queryset = Producto.objects.all()
-    empresa_lookup_field = 'empresa_id__in' # El campo a filtrar en el modelo Producto
+    empresa_lookup_field = 'empresa_id__in'
     def get_serializer_context(self):
         return {'request': self.request}
 
 class SuscripcionViewSet(EmpresaScopeMixin, viewsets.ModelViewSet):
     serializer_class = SuscripcionSerializer
     queryset = Suscripcion.objects.all()
-    empresa_lookup_field = 'empresa_id__in' # El campo a filtrar en el modelo Suscripcion
+    empresa_lookup_field = 'empresa_id__in'
 
 class DiaImportanteViewSet(EmpresaScopeMixin, viewsets.ModelViewSet):
     serializer_class = DiaImportanteSerializer
     queryset = DiaImportante.objects.all()
-    empresa_lookup_field = 'empresa_id__in' # El campo a filtrar en el modelo DiaImportante
+    empresa_lookup_field = 'empresa_id__in'

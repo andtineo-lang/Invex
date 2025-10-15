@@ -1,19 +1,20 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import (
-    # ✅ COMBINACIÓN: Se incluyen todas las vistas de ambas versiones para no perder nada.
-    RegistroView,
-    CustomLoginView,
-    CurrentUserView,
-    RegisterAndActivateView,
+    # Se incluyen todas las vistas de ambas versiones para no perder nada.
     CrearUsuarioEmpresaView,
     CurrentEmpresaView,
-    InventarioImportAPIView,
-    EmpresaViewSet,
-    ProductoViewSet,
-    SuscripcionViewSet,
+    CurrentUserView,
+    CustomLoginView,
     DiaImportanteViewSet,
-    MarcarTutorialVistoView, # Esencial para tu nueva funcionalidad de tutorial
+    EmpresaViewSet,
+    InventarioImportAPIView,
+    MarcarTutorialVistoView,
+    ProductoViewSet,
+    RegisterAndActivateView,
+    RegistroView,
+    StockViewSet,
+    SuscripcionViewSet,
 )
 
 # Router para ViewSets (operaciones CRUD)
@@ -26,15 +27,14 @@ router.register(r'dias-importantes', DiaImportanteViewSet, basename='dia-importa
 # Definición de URLs de la API
 urlpatterns = [
     # --- Rutas de Autenticación y Perfil ---
-    # ✅ Se mantiene la nueva ruta de registro de 'main'
     path('auth/registro/', RegistroView.as_view(), name='registro'),
     path('auth/login/', CustomLoginView.as_view(), name='custom-login'),
     path('auth/register-and-activate/', RegisterAndActivateView.as_view(), name='register-and-activate'),
     
-    # ✅ Se mantiene la ruta estandarizada de 'main' (/users/me/) porque el frontend ya la usa
+    # Se mantiene la ruta estandarizada de 'main' (/users/me/) porque el frontend ya la usa
     path('users/me/', CurrentUserView.as_view(), name='current-user'),
     
-    # ✅ Se añade tu nueva ruta para que el tutorial funcione
+    # Se añade tu nueva ruta para que el tutorial funcione
     path('auth/marcar-tutorial-visto/', MarcarTutorialVistoView.as_view(), name='marcar-tutorial-visto'),
 
     # --- Rutas de Gestión de Usuarios y Empresa ---
