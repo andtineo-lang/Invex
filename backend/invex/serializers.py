@@ -2,7 +2,18 @@ from rest_framework import serializers
 from django.db import transaction
 from django.utils import timezone
 from dateutil.relativedelta import relativedelta
-from .models import Usuario, Empresa, UsuarioEmpresa, Producto, Stock, Suscripcion, DiaImportante, Categoria
+from .models import (
+    Usuario, 
+    Empresa, 
+    UsuarioEmpresa, 
+    Producto, 
+    Stock, 
+    Suscripcion, 
+    DiaImportante, 
+    Categoria,
+    Proveedor,  # Importado para la importación masiva
+    Movimiento  # Importado para la importación masiva
+)
 
 # ---------------------------
 # SERIALIZADOR DE REGISTRO SIMPLE
@@ -95,6 +106,32 @@ class FullRegistrationSerializer(serializers.Serializer):
             pago_por=user
         )
         return user
+
+# ---------------------------
+# SERIALIZADOR DE IMPORTACIÓN MASIVA (NUEVO)
+# ---------------------------
+class InventarioImportSerializer(serializers.Serializer):
+    """
+    Serializador para procesar la lista de objetos de importación
+    que incluyen datos de Producto, Stock y Movimiento desde Excel.
+    """
+    # Campos base de Producto/Stock
+    nombre = serializers.CharField(max_length=255)
+    stock_actual = serializers.IntegerField(required=False, default=0, allow_null=True)
+    categoria = serializers.CharField(max_length=255, required=False, allow_null=True)
+    unidad_medida = serializers.CharField(max_length=50, required=False, allow_null=True)
+    
+    # Nuevos campos de Movimiento (Opcionales)
+    cantidad_comprada = serializers.IntegerField(required=False, default=None, allow_null=True)
+    cantidad_vendida = serializers.IntegerField(required=False, default=None, allow_null=True)
+    proveedor = serializers.CharField(max_length=255, required=False, allow_null=True)
+    
+    # 💥 MODIFICADO: Usamos fecha_compra_producto en lugar de fecha_transaccion
+    fecha_compra_producto = serializers.DateField(required=False, allow_null=True) 
+    
+    fecha_pedido = serializers.DateField(required=False, allow_null=True)
+    fecha_recepcion = serializers.DateField(required=False, allow_null=True)
+
 
 # ---------------------------
 # SERIALIZERS DE MODELOS (PARA CRUD)

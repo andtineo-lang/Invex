@@ -1,4 +1,5 @@
-# Create your models here.
+# models.py (Finalizado y Corregido)
+
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, BaseUserManager
 from django.utils import timezone
@@ -37,7 +38,7 @@ class Usuario(AbstractBaseUser, PermissionsMixin):
     is_staff = models.BooleanField(default=False)
     date_joined = models.DateTimeField(default=timezone.now)
 
-    # 👇 CAMBIO AÑADIDO
+    # CAMBIO AÑADIDO
     mostrar_tutorial = models.BooleanField(default=True)
 
     objects = UsuarioManager()
@@ -53,10 +54,8 @@ class Usuario(AbstractBaseUser, PermissionsMixin):
 # ---------------------------
 class Empresa(models.Model):
     nombre = models.CharField(max_length=255, unique=True)
-    # 👇 CAMPOS AÑADIDOS
     rut = models.CharField(max_length=20, blank=True, null=True, unique=True)
     rubro = models.CharField(max_length=255, blank=True)
-    # 👆
     fecha_creacion = models.DateTimeField(auto_now_add=True)
     owner = models.ForeignKey(
         Usuario,
@@ -66,6 +65,19 @@ class Empresa(models.Model):
         related_name="empresas_propietarias"
     )
 
+    def __str__(self):
+        return self.nombre
+
+# ---------------------------
+# PROVEEDOR (NUEVO)
+# ---------------------------
+class Proveedor(models.Model):
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name='proveedores')
+    nombre = models.CharField(max_length=255)
+    
+    class Meta:
+        unique_together = ('empresa', 'nombre')
+        
     def __str__(self):
         return self.nombre
 
@@ -148,7 +160,7 @@ class Stock(models.Model):
     demanda_estacional = models.CharField(max_length=100, default="Normal")
     fecha_entrega_aprox = models.DateField(null=True, blank=True)
 
-    # --- LÓGICA DE PROYECCIÓN AÑADIDA ---
+    # --- LÓGICA DE PROYECCIÓN ---
     SEMANAS_DE_SEGURIDAD = 2
     SEMANAS_OBJETIVO = 4
 
@@ -186,6 +198,40 @@ class Stock(models.Model):
 
     def __str__(self):
         return f"{self.producto.nombre}: {self.stock_actual}"
+    
+# ---------------------------
+# MOVIMIENTO DE INVENTARIO (CORREGIDO)
+# ---------------------------
+class Movimiento(models.Model):
+    TIPOS = [
+        ('venta', 'Venta'),
+        ('compra', 'Compra'),
+        ('ajuste', 'Ajuste de Stock'),
+    ]
+    
+    producto = models.ForeignKey(Producto, on_delete=models.CASCADE, related_name='movimientos')
+    tipo = models.CharField(max_length=10, choices=TIPOS)
+    
+    # Cantidades y Fechas
+    cantidad = models.IntegerField()
+    unidad_medida = models.CharField(max_length=50, blank=True, null=True)
+    # 💥 CAMBIO REALIZADO: Usamos fecha_compra_producto en lugar de fecha_transaccion
+    fecha_compra_producto = models.DateField(default=timezone.now) 
+    
+    # Campos específicos de Compra/Recepción
+    proveedor = models.ForeignKey(Proveedor, on_delete=models.SET_NULL, null=True, blank=True)
+    fecha_pedido = models.DateField(null=True, blank=True)
+    fecha_recepcion = models.DateField(null=True, blank=True)
+    
+    notas = models.TextField(blank=True, null=True)
+
+    class Meta:
+        verbose_name_plural = "Movimientos de Inventario"
+        # 💥 CAMBIO REALIZADO: Ordenar por el campo renombrado
+        ordering = ['-fecha_compra_producto'] 
+
+    def __str__(self):
+        return f"{self.tipo.capitalize()} de {self.cantidad}x {self.producto.nombre}"
 
 # ---------------------------
 # DÍAS IMPORTANTES
