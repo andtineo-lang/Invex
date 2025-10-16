@@ -4,6 +4,7 @@ from unidecode import unidecode
 from django.db import transaction
 from django.contrib.auth import get_user_model
 from django.utils.crypto import get_random_string
+from django.utils import timezone 
 from rest_framework import viewsets, generics, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -17,7 +18,9 @@ from .models import (
     Stock,
     Suscripcion,
     DiaImportante,
-    Categoria
+    Categoria,
+    Proveedor, 
+    Movimiento 
 )
 from .serializers import (
     RegistroSerializer,
@@ -26,7 +29,8 @@ from .serializers import (
     ProductoSerializer,
     SuscripcionSerializer,
     DiaImportanteSerializer,
-    FullRegistrationSerializer
+    FullRegistrationSerializer,
+    InventarioImportSerializer, 
 )
 
 Usuario = get_user_model()
@@ -54,11 +58,18 @@ class CustomLoginView(APIView):
         try:
             relacion = user.relaciones.get(empresa__nombre=empresa_nombre)
             user_role = relacion.rol
+            empresa_id = relacion.empresa.id  # Obtener el ID de la empresa
         except UsuarioEmpresa.DoesNotExist:
             return Response({"detail": f"El usuario no tiene acceso a la empresa '{empresa_nombre}'."}, status=status.HTTP_403_FORBIDDEN)
         
         refresh = RefreshToken.for_user(user)
-        return Response({'refresh': str(refresh), 'access': str(refresh.access_token), 'rol': user_role})
+        # Devolver el empresa_id para que Pinia lo guarde
+        return Response({
+            'refresh': str(refresh), 
+            'access': str(refresh.access_token), 
+            'rol': user_role,
+            'empresa_id': empresa_id 
+        })
 
 class RegistroView(generics.CreateAPIView):
     serializer_class = RegistroSerializer
@@ -67,11 +78,16 @@ class RegistroView(generics.CreateAPIView):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         result = serializer.save()
+        
+        # Recuperar el ID de la empresa creada/asociada
+        empresa_id = result["empresa"].id 
+        
         return Response({
             "mensaje": "Registro exitoso",
             "usuario": UsuarioSerializer(result["usuario"]).data,
             "empresa": EmpresaSerializer(result["empresa"]).data,
-            "rol": result["rol"]
+            "rol": result["rol"],
+            "empresa_id": empresa_id 
         })
 
 class CurrentUserView(APIView):
@@ -84,7 +100,7 @@ class CurrentEmpresaView(APIView):
     permission_classes = [IsAuthenticated]
     def get(self, request):
         usuario = request.user
-        relacion = UsuarioEmpresa.objects.filter(usuario=usuario).first()
+        relacion = UsuarioEmpresa.objects.filter(usuario=usuario).first() 
         if not relacion:
             return Response({"error": "El usuario no está asociado a ninguna empresa."}, status=status.HTTP_404_NOT_FOUND)
         empresa = relacion.empresa
@@ -114,11 +130,17 @@ class RegisterAndActivateView(APIView):
         serializer = FullRegistrationSerializer(data=registration_data)
         if serializer.is_valid():
             user = serializer.save()
+            
+            # Obtener el ID de la empresa recién creada para devolverlo
+            empresa = Empresa.objects.get(owner=user)
+            empresa_id = empresa.id
+            
             refresh = RefreshToken.for_user(user)
             return Response({
                 'message': '¡Usuario y suscripción creados exitosamente!',
                 'token': str(refresh.access_token),
-                'rol': 'admin'
+                'rol': 'admin',
+                'empresa_id': empresa_id 
             }, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -181,65 +203,138 @@ class CrearUsuarioEmpresaView(APIView):
             return Response({"error": f"Ocurrió un error inesperado: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 # ----------------------------------------------------
-# VISTA DE ACCIÓN PARA IMPORTAR INVENTARIO
+# VISTA DE ACCIÓN PARA IMPORTAR INVENTARIO (ACTUALIZADA)
 # ----------------------------------------------------
 class InventarioImportAPIView(APIView):
     permission_classes = [IsAuthenticated]
+    
     def post(self, request, empresa_id):
         user = request.user
-        empresas_del_usuario = UsuarioEmpresa.objects.filter(usuario=user).values_list('empresa_id', flat=True)
-        if empresa_id not in empresas_del_usuario:
-            return Response({"error": "No tienes permiso para acceder a esta empresa."}, status=status.HTTP_403_FORBIDDEN)
         
+        # 1. Permisos y Contexto de Empresa
+        try:
+            empresa = Empresa.objects.get(pk=empresa_id)
+            if not UsuarioEmpresa.objects.filter(usuario=user, empresa=empresa).exists():
+                return Response({"error": "No tienes permiso para acceder a esta empresa."}, status=status.HTTP_403_FORBIDDEN)
+        except Empresa.DoesNotExist:
+            return Response({"error": "Empresa no encontrada."}, status=status.HTTP_404_NOT_FOUND)
+
         data = request.data
         if not isinstance(data, list) or not data:
             return Response({"error": "Los datos deben ser una lista de productos."}, status=status.HTTP_400_BAD_REQUEST)
         
-        errores = []
-        productos_procesados = 0
+        # 2. Validación de datos masiva
+        serializer = InventarioImportSerializer(data=data, many=True)
+        if not serializer.is_valid():
+            # Devolver los errores detallados por fila
+            return Response({"error": "Errores de validación en los datos.", "detalles": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+        
+        movimientos_a_crear = []
+        proveedores_existentes = {} # Caché para evitar consultas repetidas
+
         try:
             with transaction.atomic():
-                empresa = Empresa.objects.get(pk=empresa_id)
-                for i, item in enumerate(data):
-                    nombre_producto = item.get('nombre')
-                    if not nombre_producto:
-                        errores.append(f"Fila {i+1}: El nombre del producto es obligatorio.")
-                        continue
+                # 3. Procesamiento de datos validados
+                for item in serializer.validated_data:
+                    # Extracción de campos de Producto/Stock
+                    nombre_producto = item.pop('nombre').strip()
+                    stock_actual = item.pop('stock_actual', 0)
+                    nombre_categoria = item.pop('categoria')
+                    unidad_medida = item.pop('unidad_medida')
                     
-                    nombre_categoria = item.get('categoria')
+                    # Extracción de campos de Movimiento (datos transaccionales)
+                    cantidad_comprada = item.pop('cantidad_comprada', None)
+                    cantidad_vendida = item.pop('cantidad_vendida', None)
+                    nombre_proveedor = item.pop('proveedor')
+                    
+                    # 💥 MODIFICADO: Extraer el campo renombrado fecha_compra_producto
+                    fecha_compra_producto = item.pop('fecha_compra_producto', timezone.now().date()) 
+                    
+                    fecha_pedido = item.pop('fecha_pedido', None)
+                    fecha_recepcion = item.pop('fecha_recepcion', None)
+                    
+                    # Categoria (Crear/Obtener)
                     categoria_obj = None
-                    if nombre_categoria and nombre_categoria.strip():
+                    if nombre_categoria:
                         categoria_obj, _ = Categoria.objects.get_or_create(
                             empresa=empresa,
                             nombre__iexact=nombre_categoria.strip(),
                             defaults={'nombre': nombre_categoria.strip()}
                         )
 
+                    # Producto (Crear/Actualizar - Usando nombre como clave única)
                     producto, _ = Producto.objects.update_or_create(
                         empresa=empresa,
-                        nombre__iexact=nombre_producto.strip(),
+                        nombre__iexact=nombre_producto,
                         defaults={
-                            'nombre': nombre_producto.strip(),
-                            'unidad_medida': item.get('unidad_medida', 'unidades'),
+                            'nombre': nombre_producto,
+                            'unidad_medida': unidad_medida or 'unidades',
                             'categoria': categoria_obj
                         }
                     )
 
+                    # Stock (Actualizar el stock actual)
                     Stock.objects.update_or_create(
                         producto=producto,
-                        defaults={'stock_actual': int(item.get('stock_actual', 0) or 0)}
+                        defaults={'stock_actual': int(stock_actual or 0)}
                     )
-                    productos_procesados += 1
+                    
+                    # Proveedor (Crear/Obtener)
+                    proveedor_obj = None
+                    if nombre_proveedor:
+                        # Usar caché para Proveedores
+                        if nombre_proveedor not in proveedores_existentes:
+                            proveedor_obj, _ = Proveedor.objects.get_or_create(
+                                empresa=empresa,
+                                nombre__iexact=nombre_proveedor.strip(),
+                                defaults={'nombre': nombre_proveedor.strip()}
+                            )
+                            proveedores_existentes[nombre_proveedor] = proveedor_obj
+                        proveedor_obj = proveedores_existentes[nombre_proveedor]
+                        
+                    # 4. Creación de Movimientos (Transacciones)
+                    
+                    # A. Movimiento de Compra
+                    if cantidad_comprada is not None and int(cantidad_comprada) > 0:
+                        movimientos_a_crear.append(Movimiento(
+                            producto=producto,
+                            tipo='compra',
+                            cantidad=int(cantidad_comprada),
+                            unidad_medida=unidad_medida,
+                            # 💥 MODIFICADO: Usar fecha_compra_producto en lugar de fecha_transaccion
+                            fecha_compra_producto=fecha_compra_producto, 
+                            proveedor=proveedor_obj,
+                            fecha_pedido=fecha_pedido,
+                            fecha_recepcion=fecha_recepcion,
+                        ))
+                    
+                    # B. Movimiento de Venta
+                    if cantidad_vendida is not None and int(cantidad_vendida) > 0:
+                        movimientos_a_crear.append(Movimiento(
+                            producto=producto,
+                            tipo='venta',
+                            cantidad=int(cantidad_vendida),
+                            unidad_medida=unidad_medida,
+                            # 💥 MODIFICADO: Usar fecha_compra_producto en lugar de fecha_transaccion
+                            fecha_compra_producto=fecha_compra_producto, 
+                            # Las ventas no suelen tener proveedor
+                        ))
                 
-                if errores:
-                    raise ValueError("Se encontraron errores de validación.")
-
-        except Empresa.DoesNotExist:
-            return Response({"error": "Empresa no encontrada."}, status=status.HTTP_404_NOT_FOUND)
+                # Creación masiva de movimientos
+                Movimiento.objects.bulk_create(movimientos_a_crear)
+                
         except Exception as e:
-            return Response({"error": "No se pudo completar la importación.", "detalles": errores or [str(e)]}, status=status.HTTP_400_BAD_REQUEST)
+            # Revertir transacción si falla cualquier paso
+            return Response({"error": f"Error de base de datos durante el procesamiento.", "detalles": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        return Response({"mensaje": f"Se importaron y/o actualizaron {productos_procesados} productos exitosamente."}, status=status.HTTP_201_CREATED)
+        productos_procesados = len(serializer.validated_data)
+        movimientos_creados = len(movimientos_a_crear)
+
+        return Response({
+            "mensaje": f"Se procesaron {productos_procesados} filas. Productos actualizados y {movimientos_creados} movimientos creados exitosamente.",
+            "productos_actualizados": productos_procesados,
+            "movimientos_creados": movimientos_creados
+        }, status=status.HTTP_201_CREATED)
 
 # ----------------------------------------------------
 # MIXIN PARA FILTRAR POR EMPRESA
