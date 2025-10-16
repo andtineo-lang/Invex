@@ -11,17 +11,14 @@ from .models import (
     Suscripcion, 
     DiaImportante, 
     Categoria,
-    Proveedor,  # Importado para la importación masiva
-    Movimiento  # Importado para la importación masiva
+    Proveedor,
+    Movimiento
 )
 
 # ---------------------------
 # SERIALIZADOR DE REGISTRO SIMPLE
 # ---------------------------
 class RegistroSerializer(serializers.Serializer):
-    """
-    Maneja un registro simple de usuario y empresa. Útil para flujos rápidos.
-    """
     empresa_nombre = serializers.CharField(max_length=255)
     email = serializers.EmailField()
     password = serializers.CharField(write_only=True, min_length=6)
@@ -48,9 +45,6 @@ class RegistroSerializer(serializers.Serializer):
 # SERIALIZADOR DE REGISTRO COMPLETO (DESPUÉS DEL PAGO)
 # ---------------------------
 class FullRegistrationSerializer(serializers.Serializer):
-    """
-    Gestiona la creación de un nuevo usuario, empresa y suscripción en una sola transacción.
-    """
     name = serializers.CharField(max_length=255)
     email = serializers.EmailField()
     password = serializers.CharField(write_only=True, min_length=8)
@@ -66,26 +60,22 @@ class FullRegistrationSerializer(serializers.Serializer):
 
     @transaction.atomic
     def create(self, validated_data):
-        # 1. Crear el Usuario
         user = Usuario.objects.create_user(
             email=validated_data['email'],
             password=validated_data['password'],
             nombre=validated_data['name']
         )
-        # 2. Crear la Empresa
         empresa = Empresa.objects.create(
             nombre=validated_data['company'],
             rut=validated_data['rut'],
             rubro=validated_data['industry'],
             owner=user
         )
-        # 3. Crear la relación Usuario-Empresa
         UsuarioEmpresa.objects.create(
             usuario=user,
             empresa=empresa,
             rol='admin'
         )
-        # 4. Crear la Suscripción
         plan_map = {'Plan Trimestral': '3m', 'Plan Semestral': '6m', 'Plan Anual': '1y'}
         plan_tipo = plan_map.get(validated_data['plan'])
         if not plan_tipo:
@@ -108,30 +98,19 @@ class FullRegistrationSerializer(serializers.Serializer):
         return user
 
 # ---------------------------
-# SERIALIZADOR DE IMPORTACIÓN MASIVA (NUEVO)
+# SERIALIZADOR DE IMPORTACIÓN MASIVA
 # ---------------------------
 class InventarioImportSerializer(serializers.Serializer):
-    """
-    Serializador para procesar la lista de objetos de importación
-    que incluyen datos de Producto, Stock y Movimiento desde Excel.
-    """
-    # Campos base de Producto/Stock
     nombre = serializers.CharField(max_length=255)
     stock_actual = serializers.IntegerField(required=False, default=0, allow_null=True)
     categoria = serializers.CharField(max_length=255, required=False, allow_null=True)
     unidad_medida = serializers.CharField(max_length=50, required=False, allow_null=True)
-    
-    # Nuevos campos de Movimiento (Opcionales)
     cantidad_comprada = serializers.IntegerField(required=False, default=None, allow_null=True)
     cantidad_vendida = serializers.IntegerField(required=False, default=None, allow_null=True)
     proveedor = serializers.CharField(max_length=255, required=False, allow_null=True)
-    
-    # 💥 MODIFICADO: Usamos fecha_compra_producto en lugar de fecha_transaccion
     fecha_compra_producto = serializers.DateField(required=False, allow_null=True) 
-    
     fecha_pedido = serializers.DateField(required=False, allow_null=True)
     fecha_recepcion = serializers.DateField(required=False, allow_null=True)
-
 
 # ---------------------------
 # SERIALIZERS DE MODELOS (PARA CRUD)
@@ -139,14 +118,11 @@ class InventarioImportSerializer(serializers.Serializer):
 class UsuarioSerializer(serializers.ModelSerializer):
     class Meta:
         model = Usuario
-        # 👇 AÑADE 'mostrar_tutorial' A LOS CAMPOS
         fields = ['id', 'email', 'nombre', 'mostrar_tutorial'] 
-
 
 class EmpresaSerializer(serializers.ModelSerializer):
     class Meta:
         model = Empresa
-        # Se incluyen los campos 'rut' y 'rubro'
         fields = ['id', 'nombre', 'rut', 'rubro', 'owner', 'fecha_creacion']
 
 class UsuarioEmpresaSerializer(serializers.ModelSerializer):
@@ -161,7 +137,6 @@ class CategoriaSerializer(serializers.ModelSerializer):
         model = Categoria
         fields = '__all__'
 
-# --- Serializer de Productos y Stock (La versión avanzada) ---
 class StockWriteSerializer(serializers.ModelSerializer):
     class Meta:
         model = Stock
@@ -227,7 +202,10 @@ class SuscripcionSerializer(serializers.ModelSerializer):
         model = Suscripcion
         fields = '__all__'
 
+# ✅ CAMBIO: Actualizamos este serializer
 class DiaImportanteSerializer(serializers.ModelSerializer):
     class Meta:
         model = DiaImportante
-        fields = '__all__'
+        # Definimos explícitamente los campos que la API usará.
+        # Excluimos 'empresa' porque la vista la asignará automáticamente por seguridad.
+        fields = ['id', 'nombre_evento', 'fecha', 'descripcion']

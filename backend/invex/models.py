@@ -1,5 +1,3 @@
-# models.py (Finalizado y Corregido)
-
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, BaseUserManager
 from django.utils import timezone
@@ -37,8 +35,6 @@ class Usuario(AbstractBaseUser, PermissionsMixin):
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
     date_joined = models.DateTimeField(default=timezone.now)
-
-    # CAMBIO AÑADIDO
     mostrar_tutorial = models.BooleanField(default=True)
 
     objects = UsuarioManager()
@@ -69,7 +65,7 @@ class Empresa(models.Model):
         return self.nombre
 
 # ---------------------------
-# PROVEEDOR (NUEVO)
+# PROVEEDOR
 # ---------------------------
 class Proveedor(models.Model):
     empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name='proveedores')
@@ -160,47 +156,41 @@ class Stock(models.Model):
     demanda_estacional = models.CharField(max_length=100, default="Normal")
     fecha_entrega_aprox = models.DateField(null=True, blank=True)
 
-    # --- LÓGICA DE PROYECCIÓN ---
     SEMANAS_DE_SEGURIDAD = 2
     SEMANAS_OBJETIVO = 4
 
     @property
     def stock_total_disponible(self):
-        """Calcula el stock real más lo que viene en camino."""
         return self.stock_actual + self.stock_transito
 
     @property
     def semanas_de_stock(self):
-        """Calcula para cuántas semanas nos alcanza el stock total disponible."""
         if self.ventas_proyectadas > 0:
             return self.stock_total_disponible / self.ventas_proyectadas
-        return float('inf')  # Si no hay ventas, el stock es teóricamente infinito.
+        return float('inf')
 
     @property
     def proyeccion_status(self):
-        """Determina si es necesario comprar y devuelve un estado."""
         if self.semanas_de_stock <= self.SEMANAS_DE_SEGURIDAD:
             return "Comprar Ahora"
-        elif self.semanas_de_stock <= self.SEMANAS_DE_SEGURIDAD + 1:  # Umbral de advertencia
+        elif self.semanas_de_stock <= self.SEMANAS_DE_SEGURIDAD + 1:
             return "Revisar Pronto"
         else:
             return "Stock OK"
 
     @property
     def proyeccion_cantidad_a_comprar(self):
-        """Calcula cuántas unidades se recomienda comprar."""
         if self.proyeccion_status == "Comprar Ahora":
             stock_objetivo = self.ventas_proyectadas * self.SEMANAS_OBJETIVO
             cantidad_necesaria = stock_objetivo - self.stock_total_disponible
             return max(0, round(cantidad_necesaria))
         return 0
-    # --- FIN DE LA LÓGICA DE PROYECCIÓN ---
 
     def __str__(self):
         return f"{self.producto.nombre}: {self.stock_actual}"
     
 # ---------------------------
-# MOVIMIENTO DE INVENTARIO (CORREGIDO)
+# MOVIMIENTO DE INVENTARIO
 # ---------------------------
 class Movimiento(models.Model):
     TIPOS = [
@@ -211,23 +201,16 @@ class Movimiento(models.Model):
     
     producto = models.ForeignKey(Producto, on_delete=models.CASCADE, related_name='movimientos')
     tipo = models.CharField(max_length=10, choices=TIPOS)
-    
-    # Cantidades y Fechas
     cantidad = models.IntegerField()
     unidad_medida = models.CharField(max_length=50, blank=True, null=True)
-    # 💥 CAMBIO REALIZADO: Usamos fecha_compra_producto en lugar de fecha_transaccion
-    fecha_compra_producto = models.DateField(default=timezone.now) 
-    
-    # Campos específicos de Compra/Recepción
+    fecha_compra_producto = models.DateField(default=timezone.now)
     proveedor = models.ForeignKey(Proveedor, on_delete=models.SET_NULL, null=True, blank=True)
     fecha_pedido = models.DateField(null=True, blank=True)
     fecha_recepcion = models.DateField(null=True, blank=True)
-    
     notas = models.TextField(blank=True, null=True)
 
     class Meta:
         verbose_name_plural = "Movimientos de Inventario"
-        # 💥 CAMBIO REALIZADO: Ordenar por el campo renombrado
         ordering = ['-fecha_compra_producto'] 
 
     def __str__(self):
@@ -240,6 +223,8 @@ class DiaImportante(models.Model):
     empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name='dias_importantes')
     nombre_evento = models.CharField(max_length=255)
     fecha = models.DateField()
+    # ✅ CAMBIO: Añadimos el campo para la descripción, que puede estar vacío
+    descripcion = models.TextField(blank=True, null=True)
 
     def __str__(self):
         return f"{self.nombre_evento} ({self.empresa.nombre})"
