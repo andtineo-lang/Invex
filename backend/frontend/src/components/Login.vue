@@ -95,9 +95,12 @@ const handleLogin = async () => {
 
     const accessToken = loginResponse.data.access;
     const userRole = loginResponse.data.rol;
+    const empresaId = loginResponse.data.empresa_id; // 💥 CAPTURAR el nuevo campo empresa_id
 
-    authStore.loginSuccess(accessToken, userRole);
+    // 💥 MODIFICAR: Pasar el tercer argumento (empresaId) al store
+    authStore.loginSuccess(accessToken, userRole, empresaId);
     console.log("✅ Paso 2: Store de Pinia actualizado. Autenticado:", authStore.isAuthenticated); // LOG 3
+    console.log(`✅ ID de Empresa guardado: ${empresaId}`); // Nuevo LOG para confirmación
 
     await axiosInstance.get('/users/me/');
     console.log("✅ Paso 3: Verificación de usuario (/users/me) exitosa."); // LOG 4

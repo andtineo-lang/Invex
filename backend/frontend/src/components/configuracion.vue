@@ -9,7 +9,7 @@
         <h2 class="text-3xl font-bold text-gray-900">Configuración del Sistema</h2>
       </div>
       <p class="text-gray-600 mt-2 text-sm sm:text-base">
-        Personaliza parámetros del sistema, fechas clave y reglas de proyección de inventario.
+        Personaliza parámetros del sistema y fechas clave para tu negocio.
       </p>
     </div>
 
@@ -21,169 +21,184 @@
         <h3 class="text-xl font-bold text-gray-900">Fechas Especiales Personalizadas</h3>
       </div>
       <p class="text-gray-600 text-sm sm:text-base mb-4">
-        Agrega fechas importantes para ajustar proyecciones automáticas del sistema.
+        Agrega fechas importantes para tener un mejor registro de los eventos que afectan tu inventario.
       </p>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
         <input v-model="nuevoEvento.nombre" type="text" placeholder="Nombre del evento"
           class="border rounded-lg px-3 py-2 text-sm w-full focus:ring-2 focus:ring-teal-400 focus:border-teal-400 outline-none" />
         <input v-model="nuevoEvento.fecha" type="date"
           class="border rounded-lg px-3 py-2 text-sm w-full focus:ring-2 focus:ring-teal-400 focus:border-teal-400 outline-none" />
-        <input v-model="nuevoEvento.impacto" type="text" placeholder="Impacto esperado (+25%)"
-          class="border rounded-lg px-3 py-2 text-sm w-full focus:ring-2 focus:ring-teal-400 focus:border-teal-400 outline-none" />
-        <input v-model="nuevoEvento.categoria" type="text" placeholder="Categoría (Ej: Ropa)"
+        <input v-model="nuevoEvento.descripcion" type="text" placeholder="Descripción (Ej: Aumento en ventas)"
           class="border rounded-lg px-3 py-2 text-sm w-full focus:ring-2 focus:ring-teal-400 focus:border-teal-400 outline-none" />
       </div>
       <div class="flex justify-end">
-        <button @click="agregarFecha"
+        <!-- El texto del botón ahora cambia si estamos editando o agregando -->
+        <button @click="agregarOEditarFecha"
           class="bg-teal-500 text-white px-5 py-2 rounded-md font-semibold hover:bg-teal-600 transition">
-          + Agregar Fecha
+          {{ editId === null ? '+ Agregar Fecha' : 'Guardar Cambios' }}
         </button>
       </div>
 
       <div class="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        <div v-for="(evento, index) in fechasEspeciales" :key="index" class="border rounded-lg p-4 shadow-sm hover:shadow-md transition">
+        <!-- La key del v-for ahora usa el ID de la base de datos -->
+        <div v-for="evento in fechasEspeciales" :key="evento.id" class="border rounded-lg p-4 shadow-sm hover:shadow-md transition">
           <div class="flex items-center mb-1">
             <span class="text-2xl mr-2">{{ obtenerIconoParaEvento(evento.nombre) }}</span>
             <h4 class="font-bold text-lg text-gray-800">{{ evento.nombre }}</h4>
           </div>
           <p class="text-sm text-gray-600"><strong>Fecha:</strong> {{ evento.fecha }}</p>
-          <p class="text-sm text-gray-600"><strong>Impacto:</strong> {{ evento.impacto }}</p>
-          <p class="text-sm text-gray-600"><strong>Categoría:</strong> {{ evento.categoria }}</p>
+          <p class="text-sm text-gray-600"><strong>Descripción:</strong> {{ evento.descripcion || 'Sin descripción' }}</p>
           <div class="flex gap-4 mt-3">
-            <button @click="editarEvento(index)" class="font-medium text-teal-600 hover:text-teal-700">
+            <!-- Los botones ahora pasan el objeto completo del evento -->
+            <button @click="editarEvento(evento)" class="font-medium text-teal-600 hover:text-teal-700">
               Editar
             </button>
-            <button @click="eliminarEvento(index)" class="font-medium text-rose-600 hover:text-rose-700">
+            <button @click="eliminarEvento(evento)" class="font-medium text-rose-600 hover:text-rose-700">
               Eliminar
             </button>
           </div>
         </div>
       </div>
     </div>
-
-    <div class="bg-white rounded-lg shadow p-6">
-      <div class="flex items-center space-x-2 mb-4">
-        <svg class="w-6 h-6 text-teal-500" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6a7.5 7.5 0 1 0 7.5 7.5h-7.5V6z" />
-          <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 10.5H21A7.5 7.5 0 0 0 13.5 3v7.5z" />
-        </svg>
-        <h3 class="text-xl font-bold text-gray-900">Configuración de Predicciones</h3>
-      </div>
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Horizonte de Pronóstico</label>
-          <select v-model="horizontePronostico" class="border rounded-lg px-3 py-2 w-full focus:ring-2 focus:ring-teal-400 focus:border-teal-400 outline-none">
-            <option value="1 mes">1 mes</option>
-            <option value="3 meses">3 meses</option>
-            <option value="6 meses">6 meses</option>
-            <option value="12 meses">12 meses</option>
-          </select>
-        </div>
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Nivel de Stock de Seguridad (%)</label>
-          <input v-model.number="stockSeguridad" type="number"
-            class="border rounded-lg px-3 py-2 w-full focus:ring-2 focus:ring-teal-400 focus:border-teal-400 outline-none" />
-          <p class="text-xs text-gray-500 mt-1">Porcentaje de la demanda promedio para mantener como reserva.</p>
-        </div>
-      </div>
-      <div class="mt-8 flex justify-end">
-        <button @click="guardarConfiguracion"
-          class="bg-teal-500 text-white px-6 py-2 rounded-md font-semibold hover:bg-teal-600 transition">
-          Guardar Configuración
-        </button>
-      </div>
-    </div>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+// ✅ 1. Importamos lo necesario: onMounted para cargar datos al inicio y nuestra instancia de axios
+import { ref, onMounted } from 'vue'
+import axiosInstance from '@/api/axios.js'
+import Swal from 'sweetalert2'
 
-// CAMBIO AQUÍ: Datos simulados actualizados para incluir más ejemplos
-const fechasEspeciales = ref([
-  { nombre: 'San Valentín', fecha: '2026-02-14', impacto: '+40% ventas', categoria: 'Regalos y Flores' },
-  { nombre: 'Halloween', fecha: '2025-10-31', impacto: '+60% ventas', categoria: 'Disfraces y Dulces' },
-  { nombre: 'Navidad', fecha: '2025-12-25', impacto: '+80% ventas', categoria: 'Decoración y Regalos' },
-  { nombre: 'Aniversario de la Empresa', fecha: '2026-03-15', impacto: '+25% ventas', categoria: 'Corporativo' },
-])
+// --- ESTADO DEL COMPONENTE ---
+const fechasEspeciales = ref([]) // Inicia como un array vacío, se llenará desde la API
+const nuevoEvento = ref({ nombre: '', fecha: '', descripcion: '' })
+const editId = ref(null) // Usaremos el ID de la BD para saber si estamos editando
 
-const nuevoEvento = ref({ nombre: '', fecha: '', impacto: '', categoria: '' })
-const horizontePronostico = ref('3 meses')
-const stockSeguridad = ref(15)
-const editIndex = ref(null)
+// --- LÓGICA DE API ---
 
-// ---
-// CAMBIO AQUÍ: Nueva función para obtener el ícono
-// ---
+// ✅ 2. Nueva función para cargar las fechas desde el backend
+const cargarFechas = async () => {
+  try {
+    const response = await axiosInstance.get('/dias-importantes/');
+    // Mapeamos los nombres de los campos del backend a los que usa el frontend
+    fechasEspeciales.value = response.data.map(evento => ({
+      id: evento.id,
+      nombre: evento.nombre_evento,
+      fecha: evento.fecha,
+      descripcion: evento.descripcion
+    }));
+  } catch (error) {
+    Swal.fire({
+      icon: 'error',
+      title: 'Error al cargar las fechas',
+      text: 'No se pudo conectar con el servidor. Intenta de nuevo más tarde.',
+      confirmButtonColor: '#0d9488'
+    });
+  }
+};
+
+// ✅ 3. Usamos onMounted para llamar a cargarFechas() cuando el componente se muestra
+onMounted(() => {
+  cargarFechas();
+});
+
+// ✅ 4. Unificamos la lógica de crear y editar en una sola función
+const agregarOEditarFecha = async () => {
+  if (!nuevoEvento.value.nombre || !nuevoEvento.value.fecha) {
+    Swal.fire({ icon: 'warning', title: '¡Ups!', text: 'El nombre y la fecha son obligatorios.' });
+    return;
+  }
+
+  // Preparamos el payload con los nombres de campo que el backend espera
+  const payload = {
+      nombre_evento: nuevoEvento.value.nombre,
+      fecha: nuevoEvento.value.fecha,
+      descripcion: nuevoEvento.value.descripcion,
+  };
+
+  try {
+    if (editId.value !== null) {
+      // --- LÓGICA DE ACTUALIZACIÓN (PATCH) ---
+      await axiosInstance.patch(`/dias-importantes/${editId.value}/`, payload);
+      Swal.fire({ icon: 'success', title: '¡Evento actualizado!', toast: true, position: 'top-end', showConfirmButton: false, timer: 2000 });
+    } else {
+      // --- LÓGICA DE CREACIÓN (POST) ---
+      await axiosInstance.post('/dias-importantes/', payload);
+      Swal.fire({ icon: 'success', title: '¡Evento agregado!', toast: true, position: 'top-end', showConfirmButton: false, timer: 2000 });
+    }
+    
+    // Limpiamos el formulario, reseteamos el ID de edición y recargamos la lista de fechas
+    nuevoEvento.value = { nombre: '', fecha: '', descripcion: '' };
+    editId.value = null;
+    await cargarFechas();
+
+  } catch (error) {
+    // Manejo de errores de la API
+    const errorMsg = error.response?.data?.detail || 'Ocurrió un problema al guardar el evento.';
+    Swal.fire({ icon: 'error', title: 'Error al guardar', text: errorMsg });
+  }
+};
+
+// ✅ 5. La función de editar ahora guarda el ID del evento
+const editarEvento = (evento) => {
+  // Cargamos los datos del evento en el formulario y guardamos su ID
+  nuevoEvento.value = { ...evento };
+  editId.value = evento.id;
+};
+
+// ✅ 6. La función de eliminar ahora usa el ID del evento para la petición a la API
+const eliminarEvento = (evento) => {
+  Swal.fire({
+    title: `¿Eliminar "${evento.nombre}"?`,
+    text: "Esta acción no se puede deshacer.",
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#e11d48',
+    cancelButtonColor: '#6b7280',
+    confirmButtonText: 'Sí, ¡eliminar!',
+    cancelButtonText: 'Cancelar'
+  }).then(async (result) => {
+    if (result.isConfirmed) {
+      try {
+        await axiosInstance.delete(`/dias-importantes/${evento.id}/`);
+        Swal.fire({ title: '¡Eliminado!', text: 'El evento ha sido eliminado.', icon: 'success', timer: 1500, showConfirmButton: false });
+        await cargarFechas(); // Recargamos la lista para que desaparezca el evento
+      } catch (error) {
+        Swal.fire({ icon: 'error', title: 'Error al eliminar', text: 'No se pudo eliminar el evento.' });
+      }
+    }
+  });
+};
+
+// --- FUNCIONES AUXILIARES (sin cambios) ---
 const obtenerIconoParaEvento = (nombreEvento) => {
   const nombreEnMinusculas = nombreEvento.toLowerCase();
-
-  // --- Festividades Comunes ---
   if (nombreEnMinusculas.includes('halloween')) return '🎃';
   if (nombreEnMinusculas.includes('san valentín') || nombreEnMinusculas.includes('amor')) return '💖';
   if (nombreEnMinusculas.includes('navidad')) return '🎄';
   if (nombreEnMinusculas.includes('año nuevo')) return '🎆';
   if (nombreEnMinusculas.includes('pascua')) return '🐰';
-
-  // --- Eventos Personales o Corporativos ---
   if (nombreEnMinusculas.includes('aniversario')) return '🎉';
   if (nombreEnMinusculas.includes('día de la madre')) return '💐';
   if (nombreEnMinusculas.includes('día del padre')) return '👔';
   if (nombreEnMinusculas.includes('día del niño')) return '🎁';
-
-  // --- Eventos de Venta (Retail / E-commerce) ---
   if (nombreEnMinusculas.includes('cyber') || nombreEnMinusculas.includes('black friday')) return '💻';
-  if (nombreEnMinusculas.includes('oferta') || nombreEnMinusculas.includes('liquidación') || nombreEnMinusculas.includes('remate')) return '💸';
+  if (nombreEnMinusculas.includes('oferta') || nombreEnMinusculas.includes('liquidación')) return '💸';
   if (nombreEnMinusculas.includes('lanzamiento') || nombreEnMinusculas.includes('nuevo')) return '✨';
-  
-  // --- Temporadas (Moda / General) ---
   if (nombreEnMinusculas.includes('primavera')) return '🌸';
   if (nombreEnMinusculas.includes('verano')) return '☀️';
   if (nombreEnMinusculas.includes('otoño')) return '🍂';
   if (nombreEnMinusculas.includes('invierno')) return '❄️';
-
-  // --- Específicos de Industria ---
   if (nombreEnMinusculas.includes('escolar') || nombreEnMinusculas.includes('vuelta a clases')) return '🎒';
-  if (nombreEnMinusculas.includes('libro') || nombreEnMinusculas.includes('lectura')) return '📚';
-  if (nombreEnMinusculas.includes('gamer') || nombreEnMinusculas.includes('videojuego')) return '🎮';
-  if (nombreEnMinusculas.includes('vino') || nombreEnMinusculas.includes('vendimia')) return '🍷';
-  if (nombreEnMinusculas.includes('cerveza') || nombreEnMinusculas.includes('oktoberfest')) return '🍺';
-  
-  // --- Festividades Nacionales (Ej: Chile) ---
-  if (nombreEnMinusculas.includes('fiestas patrias') || nombreEnMinusculas.includes('dieciocho') || nombreEnMinusculas.includes('18')) return '1️⃣8️⃣🎉';
-
-  // Ícono por defecto si no encuentra ninguna palabra clave
+  if (nombreEnMinusculas.includes('fiestas patrias') || nombreEnMinusculas.includes('dieciocho')) return '🇨🇱';
   return '📅';
 };
-
-
-const agregarFecha = () => {
-  if (!nuevoEvento.value.nombre || !nuevoEvento.value.fecha) {
-    alert('Por favor, completa el nombre y la fecha del evento.')
-    return
-  }
-  if (editIndex.value !== null) {
-    fechasEspeciales.value[editIndex.value] = { ...nuevoEvento.value };
-    editIndex.value = null;
-  } else {
-    fechasEspeciales.value.push({ ...nuevoEvento.value });
-  }
-  nuevoEvento.value = { nombre: '', fecha: '', impacto: '', categoria: '' };
-}
-
-const editarEvento = (index) => {
-  nuevoEvento.value = { ...fechasEspeciales.value[index] };
-  editIndex.value = index;
-}
-
-const eliminarEvento = (index) => {
-  if (confirm(`¿Seguro que deseas eliminar el evento "${fechasEspeciales.value[index].nombre}"?`)) {
-    fechasEspeciales.value.splice(index, 1)
-  }
-}
-
-const guardarConfiguracion = () => {
-  alert(`Configuración guardada:\n- Horizonte de pronóstico: ${horizontePronostico.value}\n- Stock de seguridad: ${stockSeguridad.value}%`);
-}
 </script>
+
+<style scoped>
+/* Estilos para que el input de fecha muestre el placeholder correctamente */
+input[type="date"]:not(:focus):invalid {
+  color: #9ca3af; /* Color de texto gris para el placeholder */
+}
+</style>
