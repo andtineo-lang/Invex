@@ -1,11 +1,23 @@
-// Si luego usas axios: import axios from 'axios'; const client = axios.create({ baseURL:'/api' });
+// src/services/usersApi.service.js
+import apiClient from '../api/axios.js'; // Importamos la instancia central de Axios
 
-export function apiUsersService(){
-  console.warn('[usersApi.service] Placeholder. Usa USE_MOCK=true hasta tener backend.');
-  return {
-    async list(){ return []; },
-    async create(u){ return { id:'api_tmp', ...u }; },
-    async emailExists(){ return false; },
-    async update(id, patch){ return { id, ...patch }; } // ajusta cuando tengas API real
-  };
-}
+// Creamos el objeto de servicio directamente y lo exportamos
+const userService = {
+  list() {
+    return apiClient.get('usuarios/');
+  },
+
+  create(userData) {
+    return apiClient.post('usuarios/', userData);
+  },
+
+  update(userId, data) {
+    return apiClient.patch(`usuarios/${userId}/`, data);
+  },
+
+  remove(userId) {
+    return apiClient.delete(`usuarios/${userId}/`);
+  }
+};
+
+export default userService;
