@@ -36,7 +36,8 @@
                   <p class="text-sm font-medium text-gray-900 truncate">{{ user.nombre }}</p>
                   <p class="text-xs text-gray-500 capitalize">{{ user.rol }}</p>
                 </div>
-                <a @click.prevent="logout" href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Cerrar sesión</a>
+                <a @click.prevent="openChangePasswordModal" href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Cambiar Contraseña</a>
+                <a @click.prevent="logout" href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 border-t">Cerrar sesión</a>
               </div>
             </transition>
           </div>
@@ -73,6 +74,7 @@
             </div>
           </div>
           <div class="mt-3 px-2 space-y-1">
+            <a @click.prevent="openChangePasswordModal" href="#" class="block px-3 py-2 rounded-md text-base font-medium text-white hover:bg-teal-500">Cambiar Contraseña</a>
             <a @click.prevent="logout" href="#" class="block px-3 py-2 rounded-md text-base font-medium text-white hover:bg-teal-500">Cerrar sesión</a>
           </div>
         </div>
@@ -82,11 +84,39 @@
     <main class="main-content">
       <router-view />
     </main>
+
+    <div v-if="showChangePasswordModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+      <div class="relative w-full max-w-md bg-white rounded-2xl shadow-2xl p-6">
+        <h2 class="text-xl font-semibold mb-4">Cambiar Contraseña</h2>
+        <form @submit.prevent="submitChangePassword" class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium mb-1">Contraseña Actual</label>
+            <input v-model="passwordForm.old_password" type="password" required class="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-teal-400" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium mb-1">Nueva Contraseña</label>
+            <input v-model="passwordForm.new_password" type="password" required class="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-teal-400" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium mb-1">Confirmar Nueva Contraseña</label>
+            <input v-model="passwordForm.new_password_confirm" type="password" required class="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-teal-400" />
+          </div>
+
+          <p v-if="passwordError" class="text-red-600 text-sm">{{ passwordError }}</p>
+          <p v-if="passwordSuccess" class="text-green-600 text-sm">{{ passwordSuccess }}</p>
+
+          <div class="space-y-2 pt-2">
+            <button type="submit" class="w-full h-11 rounded-lg bg-teal-500 text-white font-semibold hover:bg-teal-600">Guardar Cambios</button>
+            <button type="button" @click="showChangePasswordModal = false" class="w-full h-11 rounded-lg border hover:bg-slate-50">Cancelar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
   </div>
 </template>
-
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, reactive, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import axiosInstance from '@/api/axios.js';
 import { useAuthStore } from '@/stores/auth.js';
@@ -105,6 +135,55 @@ const user = ref({
   rol: ''
 });
 
+// --- Lógica para el Modal de Cambio de Contraseña ---
+const showChangePasswordModal = ref(false);
+const passwordForm = reactive({
+  old_password: '',
+  new_password: '',
+  new_password_confirm: '',
+});
+const passwordError = ref('');
+const passwordSuccess = ref('');
+
+function openChangePasswordModal() {
+  perfilOpen.value = false; // Cierra el menú de perfil
+  menuOpen.value = false;  // Cierra el menú móvil
+  Object.assign(passwordForm, { old_password: '', new_password: '', new_password_confirm: '' });
+  passwordError.value = '';
+  passwordSuccess.value = '';
+  showChangePasswordModal.value = true;
+}
+
+async function submitChangePassword() {
+  passwordError.value = '';
+  passwordSuccess.value = '';
+
+  if (passwordForm.new_password !== passwordForm.new_password_confirm) {
+    passwordError.value = 'Las contraseñas nuevas no coinciden.';
+    return;
+  }
+  
+  try {
+    // Llama al endpoint de la API que creamos en Django
+    await axiosInstance.put('/users/change-password/', passwordForm);
+    passwordSuccess.value = '¡Contraseña actualizada con éxito!';
+    
+    // Cierra el modal después de 2 segundos
+    setTimeout(() => {
+      showChangePasswordModal.value = false;
+    }, 2000);
+  } catch (e) {
+    const errors = e.response?.data;
+    if (errors) {
+      // Muestra el error específico que envía el backend
+      passwordError.value = Object.values(errors).flat().join(' ');
+    } else {
+      passwordError.value = 'Ocurrió un error inesperado.';
+    }
+  }
+}
+
+// --- Configuración de la Navegación y el Tutorial ---
 const navItems = [
   { name: 'Inventario', path: '/dashboard/inventario' },
   { name: 'Importar', path: '/dashboard/inventario/importar' },
@@ -130,6 +209,14 @@ const iniciarTutorial = (rol) => {
     finish: { text: '¡Entendido!', action: tour.complete }
   };
 
+  // El nuevo paso que le indica al usuario que cambie su contraseña
+  const pasoCambiarClave = {
+    title: '¡Importante! Primer Paso',
+    text: 'Como tu cuenta fue creada por un administrador, te recomendamos cambiar tu contraseña temporal por una personal y segura.',
+    attachTo: { element: '#menu-perfil', on: 'bottom' },
+    buttons: [buttons.next] // Se quita el botón "Atrás" para que sea el primer paso real
+  };
+
   switch (rol) {
     case 'admin':
       tour.addStep({
@@ -137,40 +224,17 @@ const iniciarTutorial = (rol) => {
         text: 'Como <strong>Administrador</strong>, tienes acceso a todas las herramientas. Te daremos un breve recorrido.',
         buttons: [buttons.next]
       });
+      tour.addStep(pasoCambiarClave); // Se añade el paso aquí
       tour.addStep({
         title: 'Gestión de Inventario',
-        text: 'Aquí puedes ver y gestionar todos tus productos, revisar su stock actual, añadir nuevos artículos y editar los existentes.',
+        text: 'Aquí puedes ver y gestionar todos tus productos y su stock.',
         attachTo: { element: '#nav-button-inventario', on: 'bottom' },
         buttons: [buttons.back, buttons.next]
       });
       tour.addStep({
-        title: 'Importar Datos',
-        text: 'Usa esta potente herramienta para cargar masivamente tu inventario desde un archivo (como un Excel o CSV). ¡Ahorra horas de trabajo!',
-        attachTo: { element: '#nav-button-importar', on: 'bottom' },
-        buttons: [buttons.back, buttons.next]
-      });
-      tour.addStep({
-        title: 'Proyecciones de Demanda',
-        text: 'Anticípate al futuro. En esta sección, el sistema analiza tus datos para predecir las ventas y ayudarte a evitar quiebres de stock.',
-        attachTo: { element: '#nav-button-proyecciones', on: 'bottom' },
-        buttons: [buttons.back, buttons.next]
-      });
-      tour.addStep({
-        title: 'Reportes Detallados',
-        text: 'Genera informes clave sobre el rendimiento de tus productos, valor de inventario y mucho más para tomar decisiones informadas.',
-        attachTo: { element: '#nav-button-reportes', on: 'bottom' },
-        buttons: [buttons.back, buttons.next]
-      });
-      tour.addStep({
         title: 'Administración de Usuarios',
-        text: 'Aquí es donde gestionas a tu equipo. Puedes <strong>agregar, eliminar o buscar a tus trabajadores y editar sus permisos</strong>.',
+        text: 'Aquí gestionas a tu equipo: agregas, eliminas y editas sus permisos.',
         attachTo: { element: '#nav-button-usuarios', on: 'bottom' },
-        buttons: [buttons.back, buttons.next]
-      });
-      tour.addStep({
-        title: 'Configuración del Sistema',
-        text: 'Esta es una sección clave. Aquí puedes agregar <strong>Fechas Especiales</strong> (como Navidad o Cyber Day) para que el sistema ajuste las proyecciones automáticamente. También puedes definir parámetros avanzados como el <strong>Horizonte de Pronóstico</strong> y tu <strong>Nivel de Stock de Seguridad</strong>.',
-        attachTo: { element: '#nav-button-configuración', on: 'bottom' },
         buttons: [buttons.back, buttons.finish]
       });
       break;
@@ -178,19 +242,14 @@ const iniciarTutorial = (rol) => {
     case 'worker':
       tour.addStep({
         title: '¡Hola y bienvenido!',
-        text: 'Tu rol es fundamental para mantener el inventario al día. Te mostraremos tus herramientas principales.',
+        text: 'Tu rol es fundamental para mantener el inventario al día.',
         buttons: [buttons.next]
       });
+      tour.addStep(pasoCambiarClave); // Se añade el paso aquí también
       tour.addStep({
         title: 'Tu Espacio de Trabajo',
-        text: 'Desde <strong>Inventario</strong> podrás consultar los productos y actualizar las cantidades de stock de forma rápida y sencilla.',
+        text: 'Desde <strong>Inventario</strong> podrás consultar y actualizar las cantidades de stock.',
         attachTo: { element: '#nav-button-inventario', on: 'bottom' },
-        buttons: [buttons.back, buttons.next]
-      });
-      tour.addStep({
-        title: 'Importación Rápida',
-        text: 'Si necesitas registrar una gran cantidad de productos nuevos, aquí podrás hacerlo cargando un archivo.',
-        attachTo: { element: '#nav-button-importar', on: 'bottom' },
         buttons: [buttons.back, buttons.finish]
       });
       break;
@@ -198,7 +257,8 @@ const iniciarTutorial = (rol) => {
 
   const onTourEnd = async () => {
     try {
-      await axiosInstance.post('/auth/marcar-tutorial-visto/');
+      // Llama al endpoint correcto para marcar el tutorial como visto
+      await axiosInstance.post('/users/marcar-tutorial-visto/');
     } catch (error) {
       console.error("Error al marcar el tutorial como visto:", error);
     }
@@ -212,6 +272,7 @@ const iniciarTutorial = (rol) => {
   }
 };
 
+// --- Funciones de Carga de Datos y Navegación ---
 const fetchUserData = async () => {
   try {
     const response = await axiosInstance.get('/users/me/');
@@ -224,6 +285,7 @@ const fetchUserData = async () => {
       iniciales: (userData.nombre || 'U').split(' ').map(n => n[0]).join('').toUpperCase(),
     };
     
+    // Si el flag del backend es true, inicia el tutorial
     if (userData.mostrar_tutorial) {
       setTimeout(() => iniciarTutorial(userRole), 500);
     }
@@ -244,11 +306,11 @@ const navigateTo = (path) => {
 };
 
 const logout = () => {
+  perfilOpen.value = false;
   authStore.logout();
   router.push('/login');
 };
 </script>
-
 <style>
 /* Estilos para el layout, menú desplegable, etc. */
 .layout-container {

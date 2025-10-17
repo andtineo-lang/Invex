@@ -16,6 +16,7 @@ from .views import (
     SuscripcionViewSet,
     DiaImportanteViewSet,
     UserManagementViewSet,
+    ChangePasswordView,
 )
 
 # Router para ViewSets (operaciones CRUD)
@@ -38,6 +39,7 @@ urlpatterns = [
     path('auth/register-and-activate/', csrf_exempt(RegisterAndActivateView.as_view()), name='register-and-activate'), # 👈 Aplicar csrf_exempt
     
     path('users/me/', CurrentUserView.as_view(), name='current-user'),
+    path('users/change-password/', ChangePasswordView.as_view(), name='change-password'),
     path('users/marcar-tutorial-visto/', MarcarTutorialVistoView.as_view(), name='marcar-tutorial-visto'),
 
     # --- Rutas de Gestión de Usuarios y Empresa ---

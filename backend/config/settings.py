@@ -111,6 +111,28 @@ DATABASES = {
 AUTH_USER_MODEL = 'invex.Usuario'
 
 # ===============================================
+# VALIDACIÓN DE CONTRASEÑAS
+# ===============================================
+AUTH_PASSWORD_VALIDATORS = [
+    {
+        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        'OPTIONS': {
+            'min_length': 8, # Puedes cambiar el largo mínimo aquí
+        }
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+    },
+]
+
+
+# ===============================================
 # CONFIGURACIÓN DE CORREO
 # ===============================================
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'

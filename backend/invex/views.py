@@ -17,6 +17,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
+from .serializers import ChangePasswordSerializer
 
 from .models import (
     Empresa,
@@ -97,6 +98,36 @@ class RegistroView(generics.CreateAPIView):
             "empresa_id": empresa_id 
         })
 
+class ChangePasswordView(generics.UpdateAPIView):
+    """
+    Endpoint para que un usuario cambie su propia contraseña.
+    """
+    serializer_class = ChangePasswordSerializer
+    model = Usuario
+    permission_classes = (IsAuthenticated,)
+
+    def get_object(self, queryset=None):
+        return self.request.user
+
+    def update(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        serializer = self.get_serializer(data=request.data)
+
+        if serializer.is_valid():
+            # ❌ LÍNEA INCORRECTA
+            # self.object.set_password(serializer.data.get("new_password"))
+            
+            # ✅ LÍNEA CORRECTA: Usa validated_data
+            self.object.set_password(serializer.validated_data.get("new_password"))
+            
+            if self.object.mostrar_tutorial:
+                self.object.mostrar_tutorial = False
+            
+            self.object.save()
+            
+            return Response({"status": "contraseña cambiada con éxito"}, status=status.HTTP_200_OK)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 class CurrentUserView(APIView):
     permission_classes = [IsAuthenticated]
     def get(self, request):
@@ -122,6 +153,8 @@ class MarcarTutorialVistoView(APIView):
             user.mostrar_tutorial = False
             user.save(update_fields=['mostrar_tutorial'])
         return Response({"status": "ok"}, status=status.HTTP_200_OK)
+    
+
 
 
 # ===============================================
