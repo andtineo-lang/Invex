@@ -15,9 +15,58 @@ from .models import (
     Movimiento
 )
 
-# ---------------------------
-# SERIALIZADOR DE REGISTRO SIMPLE
-# ---------------------------
+# ====================================================================
+# SERIALIZER PARA GESTIÓN DE USUARIOS 
+# ====================================================================
+
+class UserManagementSerializer(serializers.ModelSerializer):
+    """
+    Serializer final que maneja la creación o actualización de una relación Usuario-Empresa.
+    """
+    # Campos para LEER (se muestran en la respuesta de la API)
+    name = serializers.CharField(source='usuario.nombre', read_only=True)
+    email = serializers.EmailField(source='usuario.email', read_only=True)
+
+    # Campo para ESCRIBIR (viene en la petición para crear)
+    nombre_completo = serializers.CharField(write_only=True)
+
+    class Meta:
+        model = UsuarioEmpresa
+        fields = [
+            'id',
+            'name',
+            'email',
+            'rol',
+            'nombre_completo'
+        ]
+        read_only_fields = ['id', 'name', 'email']
+
+    def create(self, validated_data):
+        """
+        Este método ahora usa 'get_or_create' para evitar el error de duplicados.
+        Si la relación ya existe, actualiza el rol si es necesario.
+        """
+        # Quitamos 'nombre_completo' porque no es parte del modelo UsuarioEmpresa
+        validated_data.pop('nombre_completo', None)
+        
+        # Usamos get_or_create para buscar o crear la relación
+        instancia, creada = UsuarioEmpresa.objects.get_or_create(
+            usuario=validated_data.get('usuario'),
+            empresa=validated_data.get('empresa'),
+            defaults={'rol': validated_data.get('rol')}
+        )
+
+        # Si la relación no fue creada (ya existía) y el rol es diferente, lo actualizamos
+        if not creada and instancia.rol != validated_data.get('rol'):
+            instancia.rol = validated_data.get('rol')
+            instancia.save()
+            
+        return instancia
+
+# ====================================================================
+# OTROS SERIALIZERS
+# ====================================================================
+
 class RegistroSerializer(serializers.Serializer):
     empresa_nombre = serializers.CharField(max_length=255)
     email = serializers.EmailField()
@@ -41,9 +90,6 @@ class RegistroSerializer(serializers.Serializer):
         UsuarioEmpresa.objects.get_or_create(usuario=usuario, empresa=empresa, defaults={'rol': rol})
         return {"usuario": usuario, "empresa": empresa, "rol": rol}
 
-# ---------------------------
-# SERIALIZADOR DE REGISTRO COMPLETO (DESPUÉS DEL PAGO)
-# ---------------------------
 class FullRegistrationSerializer(serializers.Serializer):
     name = serializers.CharField(max_length=255)
     email = serializers.EmailField()
@@ -98,7 +144,7 @@ class FullRegistrationSerializer(serializers.Serializer):
         return user
 
 # ---------------------------
-# SERIALIZADOR DE IMPORTACIÓN MASIVA
+# SERIALIZADOR DE IMPORTACIÓN MASIVA (ESTO VINO DE MAIN)
 # ---------------------------
 class InventarioImportSerializer(serializers.Serializer):
     nombre = serializers.CharField(max_length=255)
@@ -196,7 +242,7 @@ class ProductoSerializer(serializers.ModelSerializer):
                 stock_serializer.is_valid(raise_exception=True)
                 stock_serializer.save()
         return super().update(instance, validated_data)
-
+    
 class SuscripcionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Suscripcion

@@ -7,13 +7,14 @@ from .views import (
     CurrentUserView,
     RegisterAndActivateView,
     MarcarTutorialVistoView,
-    CrearUsuarioEmpresaView,
+    # CrearUsuarioEmpresaView,
     CurrentEmpresaView,
     InventarioImportAPIView,
     EmpresaViewSet,
     ProductoViewSet,
     SuscripcionViewSet,
     DiaImportanteViewSet,
+    UserManagementViewSet,
 )
 
 # Router para ViewSets (operaciones CRUD)
@@ -22,6 +23,7 @@ router.register(r'empresas', EmpresaViewSet, basename='empresa')
 router.register(r'productos', ProductoViewSet, basename='producto')
 router.register(r'suscripciones', SuscripcionViewSet, basename='suscripcion')
 router.register(r'dias-importantes', DiaImportanteViewSet, basename='dia-importante')
+router.register(r'usuarios', UserManagementViewSet, basename='usuario-gestion') # 👈 AÑADE ESTA LÍNEA
 
 # Definición de URLs de la API
 urlpatterns = [
@@ -33,7 +35,7 @@ urlpatterns = [
     path('users/marcar-tutorial-visto/', MarcarTutorialVistoView.as_view(), name='marcar-tutorial-visto'),
 
     # --- Rutas de Gestión de Usuarios y Empresa ---
-    path('usuarios/crear/', CrearUsuarioEmpresaView.as_view(), name='crear-usuario-empresa'),
+  #  path('usuarios/crear/', CrearUsuarioEmpresaView.as_view(), name='crear-usuario-empresa'),
     path('empresa/actual/', CurrentEmpresaView.as_view(), name='current-empresa'),
 
     # --- Rutas de Acciones Específicas ---
