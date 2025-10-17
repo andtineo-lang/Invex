@@ -161,16 +161,19 @@ class Stock(models.Model):
 
     @property
     def stock_total_disponible(self):
+        """Calcula el stock real más lo que viene en camino."""
         return self.stock_actual + self.stock_transito
 
     @property
     def semanas_de_stock(self):
+        """Calcula para cuántas semanas nos alcanza el stock total disponible."""
         if self.ventas_proyectadas > 0:
             return self.stock_total_disponible / self.ventas_proyectadas
         return float('inf')
 
     @property
     def proyeccion_status(self):
+        """Determina si es necesario comprar y devuelve un estado."""
         if self.semanas_de_stock <= self.SEMANAS_DE_SEGURIDAD:
             return "Comprar Ahora"
         elif self.semanas_de_stock <= self.SEMANAS_DE_SEGURIDAD + 1:
@@ -180,6 +183,7 @@ class Stock(models.Model):
 
     @property
     def proyeccion_cantidad_a_comprar(self):
+        """Calcula cuántas unidades se recomienda comprar."""
         if self.proyeccion_status == "Comprar Ahora":
             stock_objetivo = self.ventas_proyectadas * self.SEMANAS_OBJETIVO
             cantidad_necesaria = stock_objetivo - self.stock_total_disponible
@@ -203,7 +207,8 @@ class Movimiento(models.Model):
     tipo = models.CharField(max_length=10, choices=TIPOS)
     cantidad = models.IntegerField()
     unidad_medida = models.CharField(max_length=50, blank=True, null=True)
-    fecha_compra_producto = models.DateField(default=timezone.now)
+    # 📝 Nota: Este campo se usará para registrar la fecha de la compra/movimiento.
+    fecha_compra_producto = models.DateField(default=timezone.now) 
     proveedor = models.ForeignKey(Proveedor, on_delete=models.SET_NULL, null=True, blank=True)
     fecha_pedido = models.DateField(null=True, blank=True)
     fecha_recepcion = models.DateField(null=True, blank=True)
@@ -223,8 +228,8 @@ class DiaImportante(models.Model):
     empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name='dias_importantes')
     nombre_evento = models.CharField(max_length=255)
     fecha = models.DateField()
-    # ✅ CAMBIO: Añadimos el campo para la descripción, que puede estar vacío
-    descripcion = models.TextField(blank=True, null=True)
+    # 💥 AÑADIDO: Campo para la descripción del evento.
+    descripcion = models.TextField(blank=True, null=True) 
 
     def __str__(self):
         return f"{self.nombre_evento} ({self.empresa.nombre})"

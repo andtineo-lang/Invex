@@ -21,7 +21,7 @@ from .models import (
 
 class UserManagementSerializer(serializers.ModelSerializer):
     """
-    Serializer final que maneja la creación o actualización de una relación Usuario-Empresa.
+    Serializador final que maneja la creación o actualización de una relación Usuario-Empresa.
     """
     # Campos para LEER (se muestran en la respuesta de la API)
     name = serializers.CharField(source='usuario.nombre', read_only=True)
@@ -43,8 +43,7 @@ class UserManagementSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         """
-        Este método ahora usa 'get_or_create' para evitar el error de duplicados.
-        Si la relación ya existe, actualiza el rol si es necesario.
+        Este método ahora usa 'get_or_create' para buscar o crear la relación.
         """
         # Quitamos 'nombre_completo' porque no es parte del modelo UsuarioEmpresa
         validated_data.pop('nombre_completo', None)
@@ -64,7 +63,7 @@ class UserManagementSerializer(serializers.ModelSerializer):
         return instancia
 
 # ====================================================================
-# OTROS SERIALIZERS
+# SERIALIZERS DE FLUJO Y DE IMPORTACIÓN
 # ====================================================================
 
 class RegistroSerializer(serializers.Serializer):
@@ -144,9 +143,13 @@ class FullRegistrationSerializer(serializers.Serializer):
         return user
 
 # ---------------------------
-# SERIALIZADOR DE IMPORTACIÓN MASIVA (ESTO VINO DE MAIN)
+# SERIALIZADOR DE IMPORTACIÓN MASIVA
 # ---------------------------
 class InventarioImportSerializer(serializers.Serializer):
+    """
+    Serializador para procesar la lista de objetos de importación
+    desde Excel para Producto, Stock y Movimiento.
+    """
     nombre = serializers.CharField(max_length=255)
     stock_actual = serializers.IntegerField(required=False, default=0, allow_null=True)
     categoria = serializers.CharField(max_length=255, required=False, allow_null=True)
@@ -154,6 +157,7 @@ class InventarioImportSerializer(serializers.Serializer):
     cantidad_comprada = serializers.IntegerField(required=False, default=None, allow_null=True)
     cantidad_vendida = serializers.IntegerField(required=False, default=None, allow_null=True)
     proveedor = serializers.CharField(max_length=255, required=False, allow_null=True)
+    # ✅ Corregido para usar el campo definitivo
     fecha_compra_producto = serializers.DateField(required=False, allow_null=True) 
     fecha_pedido = serializers.DateField(required=False, allow_null=True)
     fecha_recepcion = serializers.DateField(required=False, allow_null=True)
@@ -242,16 +246,15 @@ class ProductoSerializer(serializers.ModelSerializer):
                 stock_serializer.is_valid(raise_exception=True)
                 stock_serializer.save()
         return super().update(instance, validated_data)
-    
+        
 class SuscripcionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Suscripcion
         fields = '__all__'
 
-# ✅ CAMBIO: Actualizamos este serializer
+# ✅ CAMBIO: Actualizamos este serializer para incluir la descripción
 class DiaImportanteSerializer(serializers.ModelSerializer):
     class Meta:
         model = DiaImportante
-        # Definimos explícitamente los campos que la API usará.
-        # Excluimos 'empresa' porque la vista la asignará automáticamente por seguridad.
+        # Definimos explícitamente los campos, incluyendo el nuevo 'descripcion'
         fields = ['id', 'nombre_evento', 'fecha', 'descripcion']

@@ -37,8 +37,8 @@ from .serializers import (
     SuscripcionSerializer,
     DiaImportanteSerializer,
     FullRegistrationSerializer,
-    UserManagementSerializer, # Esto venía de tu versión (HEAD)
-    InventarioImportSerializer  # Esto venía de main
+    UserManagementSerializer,
+    InventarioImportSerializer 
 )
 
 Usuario = get_user_model()
@@ -153,7 +153,7 @@ class RegisterAndActivateView(APIView):
 
 
 # ===============================================
-# VIEWSET DE GESTIÓN DE USUARIOS (VERSIÓN FINAL)
+# VIEWSET DE GESTIÓN DE USUARIOS
 # ===============================================
 class UserManagementViewSet(viewsets.ModelViewSet):
     """
@@ -179,16 +179,13 @@ class UserManagementViewSet(viewsets.ModelViewSet):
         Contiene toda la lógica para crear un nuevo usuario (si no existe),
         enviar el correo de bienvenida y asociarlo a la empresa.
         """
-        # El serializer ya validó 'nombre_completo' y 'rol'.
         nombre = serializer.validated_data.get('nombre_completo')
         rol = serializer.validated_data.get('rol')
         
-        # El email no es parte de la validación del serializer, lo tomamos del request.
         email = self.request.data.get('email')
         
         if not email:
-             # Si el email no viene, lanzamos una excepción de validación.
-             raise serializers.ValidationError({"error": "El campo email es obligatorio."})
+            raise serializers.ValidationError({"error": "El campo email es obligatorio."})
 
         # --- Lógica para crear o encontrar el usuario por su email ---
         usuario, created = Usuario.objects.get_or_create(
@@ -223,21 +220,143 @@ class UserManagementViewSet(viewsets.ModelViewSet):
                 print(f"Error al enviar el correo: {e}")
         
         # --- Guardado final de la relación Usuario-Empresa ---
-        # Pasamos los objetos 'usuario' y 'empresa' al método save()
-        # para que el serializer pueda crear la instancia del modelo 'UsuarioEmpresa'.
         serializer.save(usuario=usuario, empresa=empresa_actual)
 
 
 # ===============================================
-# OTRAS VISTAS Y VIEWSETS
+# VISTA DE IMPORTACIÓN MASIVA (COMPLETA)
 # ===============================================
 class InventarioImportAPIView(APIView):
     permission_classes = [IsAuthenticated]
     
     def post(self, request, empresa_id):
-        # ... (código sin cambios)
-        pass
+        user = request.user
+        
+        # 1. Permisos y Contexto de Empresa
+        try:
+            empresa = Empresa.objects.get(pk=empresa_id)
+            if not UsuarioEmpresa.objects.filter(usuario=user, empresa=empresa).exists():
+                return Response({"error": "No tienes permiso para acceder a esta empresa."}, status=status.HTTP_403_FORBIDDEN)
+        except Empresa.DoesNotExist:
+            return Response({"error": "Empresa no encontrada."}, status=status.HTTP_404_NOT_FOUND)
 
+        data = request.data
+        if not isinstance(data, list) or not data:
+            return Response({"error": "Los datos deben ser una lista de productos."}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # 2. Validación de datos masiva
+        serializer = InventarioImportSerializer(data=data, many=True)
+        if not serializer.is_valid():
+            return Response({"error": "Errores de validación en los datos.", "detalles": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+        
+        movimientos_a_crear = []
+        proveedores_existentes = {} 
+
+        try:
+            with transaction.atomic():
+                # 3. Procesamiento de datos validados
+                for item in serializer.validated_data:
+                    # Extracción de campos de Producto/Stock
+                    nombre_producto = item.pop('nombre').strip()
+                    stock_actual = item.pop('stock_actual', 0)
+                    nombre_categoria = item.pop('categoria')
+                    unidad_medida = item.pop('unidad_medida')
+                    
+                    # Extracción de campos de Movimiento (datos transaccionales)
+                    cantidad_comprada = item.pop('cantidad_comprada', None)
+                    cantidad_vendida = item.pop('cantidad_vendida', None)
+                    nombre_proveedor = item.pop('proveedor')
+                    
+                    # Usando el campo corregido: fecha_compra_producto
+                    fecha_compra_producto = item.pop('fecha_compra_producto', timezone.now().date()) 
+                    
+                    fecha_pedido = item.pop('fecha_pedido', None)
+                    fecha_recepcion = item.pop('fecha_recepcion', None)
+                    
+                    # Categoria (Crear/Obtener)
+                    categoria_obj = None
+                    if nombre_categoria:
+                        categoria_obj, _ = Categoria.objects.get_or_create(
+                            empresa=empresa,
+                            nombre__iexact=nombre_categoria.strip(),
+                            defaults={'nombre': nombre_categoria.strip()}
+                        )
+
+                    # Producto (Crear/Actualizar - Usando nombre como clave única)
+                    producto, _ = Producto.objects.update_or_create(
+                        empresa=empresa,
+                        nombre__iexact=nombre_producto,
+                        defaults={
+                            'nombre': nombre_producto,
+                            'unidad_medida': unidad_medida or 'unidades',
+                            'categoria': categoria_obj
+                        }
+                    )
+
+                    # Stock (Actualizar el stock actual)
+                    Stock.objects.update_or_create(
+                        producto=producto,
+                        defaults={'stock_actual': int(stock_actual or 0)}
+                    )
+                    
+                    # Proveedor (Crear/Obtener)
+                    proveedor_obj = None
+                    if nombre_proveedor:
+                        if nombre_proveedor not in proveedores_existentes:
+                            proveedor_obj, _ = Proveedor.objects.get_or_create(
+                                empresa=empresa,
+                                nombre__iexact=nombre_proveedor.strip(),
+                                defaults={'nombre': nombre_proveedor.strip()}
+                            )
+                            proveedores_existentes[nombre_proveedor] = proveedor_obj
+                        proveedor_obj = proveedores_existentes[nombre_proveedor]
+                        
+                    # 4. Creación de Movimientos (Transacciones)
+                    
+                    # A. Movimiento de Compra
+                    if cantidad_comprada is not None and int(cantidad_comprada) > 0:
+                        movimientos_a_crear.append(Movimiento(
+                            producto=producto,
+                            tipo='compra',
+                            cantidad=int(cantidad_comprada),
+                            unidad_medida=unidad_medida,
+                            fecha_compra_producto=fecha_compra_producto, 
+                            proveedor=proveedor_obj,
+                            fecha_pedido=fecha_pedido,
+                            fecha_recepcion=fecha_recepcion,
+                        ))
+                    
+                    # B. Movimiento de Venta
+                    if cantidad_vendida is not None and int(cantidad_vendida) > 0:
+                        movimientos_a_crear.append(Movimiento(
+                            producto=producto,
+                            tipo='venta',
+                            cantidad=int(cantidad_vendida),
+                            unidad_medida=unidad_medida,
+                            fecha_compra_producto=fecha_compra_producto, 
+                            # Las ventas no tienen proveedor
+                        ))
+                
+                # Creación masiva de movimientos
+                Movimiento.objects.bulk_create(movimientos_a_crear)
+                
+        except Exception as e:
+            # Revertir transacción si falla cualquier paso
+            return Response({"error": f"Error de base de datos durante el procesamiento.", "detalles": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        productos_procesados = len(serializer.validated_data)
+        movimientos_creados = len(movimientos_a_crear)
+
+        return Response({
+            "mensaje": f"Se procesaron {productos_procesados} filas. Productos actualizados y {movimientos_creados} movimientos creados exitosamente.",
+            "productos_actualizados": productos_procesados,
+            "movimientos_creados": movimientos_creados
+        }, status=status.HTTP_201_CREATED)
+
+
+# ===============================================
+# MIXIN Y VIEWSETS DE DATOS
+# ===============================================
 class EmpresaScopeMixin:
     permission_classes = [IsAuthenticated]
     def get_queryset(self):
@@ -269,7 +388,6 @@ class SuscripcionViewSet(EmpresaScopeMixin, viewsets.ModelViewSet):
     queryset = Suscripcion.objects.all()
     empresa_lookup_field = 'empresa_id__in'
 
-# ✅ CAMBIO: Actualizamos este ViewSet
 class DiaImportanteViewSet(EmpresaScopeMixin, viewsets.ModelViewSet):
     serializer_class = DiaImportanteSerializer
     queryset = DiaImportante.objects.all()
@@ -277,11 +395,8 @@ class DiaImportanteViewSet(EmpresaScopeMixin, viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         """Asigna automáticamente la empresa del usuario al crear un nuevo evento."""
-        # Buscamos la primera relación de empresa del usuario que hace la petición
         relacion = self.request.user.relaciones.first()
         if relacion:
-            # Guardamos el objeto asignando la empresa encontrada
             serializer.save(empresa=relacion.empresa)
         else:
-            # Esto es una validación de seguridad por si el usuario no tiene empresa
             raise serializers.ValidationError("No tienes una empresa asignada para crear este evento.")
