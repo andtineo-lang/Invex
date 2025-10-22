@@ -11,6 +11,8 @@
     "axios": "^1.12.2",
     "core-js": "^3.8.3",
     "gsap": "^3.13.0",
+    "lightweight-charts": "^5.0.9",
+    "lightweight-charts-vue": "^0.0.1",
     "lucide-vue-next": "^0.544.0",
     "papaparse": "^5.5.3",
     "pinia": "^3.0.3",

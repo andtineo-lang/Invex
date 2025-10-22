@@ -157,7 +157,6 @@ class InventarioImportSerializer(serializers.Serializer):
     cantidad_comprada = serializers.IntegerField(required=False, default=None, allow_null=True)
     cantidad_vendida = serializers.IntegerField(required=False, default=None, allow_null=True)
     proveedor = serializers.CharField(max_length=255, required=False, allow_null=True)
-    # ✅ Corregido para usar el campo definitivo
     fecha_compra_producto = serializers.DateField(required=False, allow_null=True) 
     fecha_pedido = serializers.DateField(required=False, allow_null=True)
     fecha_recepcion = serializers.DateField(required=False, allow_null=True)
@@ -252,9 +251,20 @@ class SuscripcionSerializer(serializers.ModelSerializer):
         model = Suscripcion
         fields = '__all__'
 
-# ✅ CAMBIO: Actualizamos este serializer para incluir la descripción
 class DiaImportanteSerializer(serializers.ModelSerializer):
     class Meta:
         model = DiaImportante
-        # Definimos explícitamente los campos, incluyendo el nuevo 'descripcion'
         fields = ['id', 'nombre_evento', 'fecha', 'descripcion']
+
+# 👇 --- SERIALIZER AÑADIDO PARA CÁLCULOS DINÁMICOS --- 👇
+class ProyeccionCalculadaSerializer(serializers.Serializer):
+    """
+    Este serializer no usa un modelo. Se utiliza para dar formato a los datos 
+    de proyección que calculamos manualmente en la vista.
+    """
+    id = serializers.IntegerField()
+    producto_nombre = serializers.CharField()
+    stock_actual = serializers.IntegerField()
+    demanda_semanal_proyectada = serializers.FloatField()
+    semanas_cobertura = serializers.FloatField()
+    estado = serializers.CharField()

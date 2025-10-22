@@ -1,6 +1,8 @@
+# invex/urls.py
+
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from django.views.decorators.csrf import csrf_exempt # 👈 NUEVA IMPORTACIÓN
+from django.views.decorators.csrf import csrf_exempt
 from .views import (
     # Se importan todas las vistas necesarias
     RegistroView,
@@ -8,7 +10,6 @@ from .views import (
     CurrentUserView,
     RegisterAndActivateView,
     MarcarTutorialVistoView,
-    # CrearUsuarioEmpresaView,
     CurrentEmpresaView,
     InventarioImportAPIView,
     EmpresaViewSet,
@@ -16,6 +17,13 @@ from .views import (
     SuscripcionViewSet,
     DiaImportanteViewSet,
     UserManagementViewSet,
+    VentasHistoricasView,
+    VentasMensualesView,
+    TopProductosVendidosView,
+    EstadoInventarioView,
+    ComprasPorProveedorView,
+    LeadTimePorProveedorView,
+    ProductoProyeccionesView # 👈 --- VISTA IMPORTANTE AÑADIDA ---
 )
 
 # Router para ViewSets (operaciones CRUD)
@@ -24,19 +32,14 @@ router.register(r'empresas', EmpresaViewSet, basename='empresa')
 router.register(r'productos', ProductoViewSet, basename='producto')
 router.register(r'suscripciones', SuscripcionViewSet, basename='suscripcion')
 router.register(r'dias-importantes', DiaImportanteViewSet, basename='dia-importante')
-router.register(r'usuarios', UserManagementViewSet, basename='usuario-gestion') 
+router.register(r'usuarios', UserManagementViewSet, basename='usuario-gestion')
 
 # Definición de URLs de la API
 urlpatterns = [
     # --- Rutas de Autenticación y Perfil ---
-    # El registro (POST) también podría requerir csrf_exempt si el frontend es Vue.
-    path('auth/registro/', csrf_exempt(RegistroView.as_view()), name='registro'), # 👈 Aplicar csrf_exempt
-    
-    # El LOGIN (POST) NECESITA csrf_exempt para evitar el 401 en CORS
-    path('auth/login/', csrf_exempt(CustomLoginView.as_view()), name='custom-login'), # 👈 Aplicar csrf_exempt
-    
-    path('auth/register-and-activate/', csrf_exempt(RegisterAndActivateView.as_view()), name='register-and-activate'), # 👈 Aplicar csrf_exempt
-    
+    path('auth/registro/', csrf_exempt(RegistroView.as_view()), name='registro'),
+    path('auth/login/', csrf_exempt(CustomLoginView.as_view()), name='custom-login'),
+    path('auth/register-and-activate/', csrf_exempt(RegisterAndActivateView.as_view()), name='register-and-activate'),
     path('users/me/', CurrentUserView.as_view(), name='current-user'),
     path('users/marcar-tutorial-visto/', MarcarTutorialVistoView.as_view(), name='marcar-tutorial-visto'),
 
@@ -44,8 +47,18 @@ urlpatterns = [
     path('empresa/actual/', CurrentEmpresaView.as_view(), name='current-empresa'),
 
     # --- Rutas de Acciones Específicas ---
-    # Esta ruta acepta POST/PUT, también podría necesitar csrf_exempt
     path('empresas/<int:empresa_id>/importar-inventario/', csrf_exempt(InventarioImportAPIView.as_view()), name='importar-inventario'),
+
+    # --- RUTAS DE ANALÍTICAS Y PROYECCIONES ---
+    path('analytics/ventas-historicas/', VentasHistoricasView.as_view(), name='ventas-historicas'),
+    path('analytics/ventas-mensuales/', VentasMensualesView.as_view(), name='ventas-mensuales'),
+    path('analytics/top-productos/', TopProductosVendidosView.as_view(), name='top-productos'),
+    path('analytics/estado-inventario/', EstadoInventarioView.as_view(), name='estado-inventario'),
+    path('analytics/compras-proveedor/', ComprasPorProveedorView.as_view(), name='compras-proveedor'),
+    path('analytics/lead-time-proveedor/', LeadTimePorProveedorView.as_view(), name='lead-time-proveedor'),
+    
+    # 👇 --- RUTA CLAVE PARA LA TABLA DE PROYECCIONES ---
+    path('productos/proyecciones/', ProductoProyeccionesView.as_view(), name='producto-proyecciones'),
 
     # --- Rutas CRUD gestionadas por el router ---
     path('', include(router.urls)),
