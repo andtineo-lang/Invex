@@ -91,15 +91,41 @@
         <form @submit.prevent="submitChangePassword" class="space-y-4">
           <div>
             <label class="block text-sm font-medium mb-1">Contraseña Actual</label>
-            <input v-model="passwordForm.old_password" type="password" required class="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-teal-400" />
+            <div class="relative">
+              <input v-model="passwordForm.old_password" 
+                     :type="showOldPassword ? 'text' : 'password'" 
+                     required 
+                     class="w-full border rounded px-3 py-2 pr-10 focus:ring-2 focus:ring-teal-400" />
+              <button type="button" @click="showOldPassword = !showOldPassword" class="absolute inset-y-0 right-0 flex items-center px-3 text-gray-500 hover:text-gray-700 focus:outline-none">
+                <span class="text-xl select-none">{{ showOldPassword ? '🙈' : '👁️' }}</span>
+              </button>
+            </div>
           </div>
+          
           <div>
             <label class="block text-sm font-medium mb-1">Nueva Contraseña</label>
-            <input v-model="passwordForm.new_password" type="password" required class="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-teal-400" />
+            <div class="relative">
+              <input v-model="passwordForm.new_password" 
+                     :type="showNewPassword ? 'text' : 'password'" 
+                     required 
+                     class="w-full border rounded px-3 py-2 pr-10 focus:ring-2 focus:ring-teal-400" />
+              <button type="button" @click="showNewPassword = !showNewPassword" class="absolute inset-y-0 right-0 flex items-center px-3 text-gray-500 hover:text-gray-700 focus:outline-none">
+                <span class="text-xl select-none">{{ showNewPassword ? '🙈' : '👁️' }}</span>
+              </button>
+            </div>
           </div>
+          
           <div>
             <label class="block text-sm font-medium mb-1">Confirmar Nueva Contraseña</label>
-            <input v-model="passwordForm.new_password_confirm" type="password" required class="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-teal-400" />
+            <div class="relative">
+              <input v-model="passwordForm.new_password_confirm" 
+                     :type="showConfirmPassword ? 'text' : 'password'" 
+                     required 
+                     class="w-full border rounded px-3 py-2 pr-10 focus:ring-2 focus:ring-teal-400" />
+              <button type="button" @click="showConfirmPassword = !showConfirmPassword" class="absolute inset-y-0 right-0 flex items-center px-3 text-gray-500 hover:text-gray-700 focus:outline-none">
+                <span class="text-xl select-none">{{ showConfirmPassword ? '🙈' : '👁️' }}</span>
+              </button>
+            </div>
           </div>
 
           <p v-if="passwordError" class="text-red-600 text-sm">{{ passwordError }}</p>
@@ -115,6 +141,7 @@
 
   </div>
 </template>
+
 <script setup>
 import { ref, reactive, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
@@ -145,12 +172,23 @@ const passwordForm = reactive({
 const passwordError = ref('');
 const passwordSuccess = ref('');
 
+// --- Refs para controlar la visibilidad de las contraseñas ---
+const showOldPassword = ref(false);
+const showNewPassword = ref(false);
+const showConfirmPassword = ref(false);
+
 function openChangePasswordModal() {
   perfilOpen.value = false; // Cierra el menú de perfil
-  menuOpen.value = false;  // Cierra el menú móvil
+  menuOpen.value = false;   // Cierra el menú móvil
   Object.assign(passwordForm, { old_password: '', new_password: '', new_password_confirm: '' });
   passwordError.value = '';
   passwordSuccess.value = '';
+  
+  // Resetea la visibilidad de los iconos
+  showOldPassword.value = false;
+  showNewPassword.value = false;
+  showConfirmPassword.value = false;
+  
   showChangePasswordModal.value = true;
 }
 
@@ -311,6 +349,7 @@ const logout = () => {
   router.push('/login');
 };
 </script>
+
 <style>
 /* Estilos para el layout, menú desplegable, etc. */
 .layout-container {
