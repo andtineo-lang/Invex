@@ -2,6 +2,7 @@ from rest_framework import serializers
 from django.db import transaction
 from django.utils import timezone
 from dateutil.relativedelta import relativedelta
+from django.contrib.auth.password_validation import validate_password
 from .models import (
     Usuario, 
     Empresa, 
@@ -61,6 +62,42 @@ class UserManagementSerializer(serializers.ModelSerializer):
             instancia.save()
             
         return instancia
+
+
+class ChangePasswordSerializer(serializers.Serializer):
+    """
+    Serializer para el cambio de contraseña con validaciones de seguridad.
+    """
+    old_password = serializers.CharField(required=True, write_only=True)
+    new_password = serializers.CharField(required=True, write_only=True)
+    new_password_confirm = serializers.CharField(required=True, write_only=True)
+
+    def validate_old_password(self, value):
+        user = self.context['request'].user
+        if not user.check_password(value):
+            raise serializers.ValidationError("Tu contraseña antigua no es correcta.")
+        return value
+    
+    # 👇 NUEVO: Método para validar la nueva contraseña
+    def validate_new_password(self, value):
+        # Usamos el sistema de validación de Django
+        try:
+            validate_password(password=value, user=self.context['request'].user)
+        except serializers.ValidationError as e:
+            # Capturamos los errores de Django y los relanzamos
+            raise serializers.ValidationError(list(e.messages))
+        return value
+
+    def validate(self, data):
+        # Comprueba que las contraseñas nuevas coincidan
+        if data['new_password'] != data['new_password_confirm']:
+            raise serializers.ValidationError({"new_password": "Las contraseñas nuevas no coinciden."})
+        
+        # 👇 NUEVO: Comprueba que la contraseña nueva no sea igual a la antigua
+        if data['new_password'] == data['old_password']:
+            raise serializers.ValidationError({"new_password": "La nueva contraseña no puede ser igual a la antigua."})
+
+        return data
 
 # ====================================================================
 # SERIALIZERS DE FLUJO Y DE IMPORTACIÓN

@@ -5,7 +5,7 @@ from rest_framework.routers import DefaultRouter
 from django.views.decorators.csrf import csrf_exempt
 from .views import (
     # Se importan todas las vistas necesarias
-    RegistroView,
+    # RegistroView, # Comentada porque no existe en views.py
     CustomLoginView,
     CurrentUserView,
     RegisterAndActivateView,
@@ -17,13 +17,14 @@ from .views import (
     SuscripcionViewSet,
     DiaImportanteViewSet,
     UserManagementViewSet,
-    VentasHistoricasView,
+    ChangePasswordView,
+    # VentasHistoricasView, # Comentada porque no existe en views.py
     VentasMensualesView,
     TopProductosVendidosView,
     EstadoInventarioView,
-    ComprasPorProveedorView,
-    LeadTimePorProveedorView,
-    ProductoProyeccionesView # 👈 --- VISTA IMPORTANTE AÑADIDA ---
+    # ComprasPorProveedorView, # Comentada porque no existe en views.py
+    # LeadTimePorProveedorView, # Comentada porque no existe en views.py
+    ProductoProyeccionesView
 )
 
 # Router para ViewSets (operaciones CRUD)
@@ -37,10 +38,11 @@ router.register(r'usuarios', UserManagementViewSet, basename='usuario-gestion')
 # Definición de URLs de la API
 urlpatterns = [
     # --- Rutas de Autenticación y Perfil ---
-    path('auth/registro/', csrf_exempt(RegistroView.as_view()), name='registro'),
+    # path('auth/registro/', csrf_exempt(RegistroView.as_view()), name='registro'), # Ruta comentada
     path('auth/login/', csrf_exempt(CustomLoginView.as_view()), name='custom-login'),
     path('auth/register-and-activate/', csrf_exempt(RegisterAndActivateView.as_view()), name='register-and-activate'),
     path('users/me/', CurrentUserView.as_view(), name='current-user'),
+    path('users/change-password/', ChangePasswordView.as_view(), name='change-password'),
     path('users/marcar-tutorial-visto/', MarcarTutorialVistoView.as_view(), name='marcar-tutorial-visto'),
 
     # --- Rutas de Gestión de Usuarios y Empresa ---
@@ -50,12 +52,12 @@ urlpatterns = [
     path('empresas/<int:empresa_id>/importar-inventario/', csrf_exempt(InventarioImportAPIView.as_view()), name='importar-inventario'),
 
     # --- RUTAS DE ANALÍTICAS Y PROYECCIONES ---
-    path('analytics/ventas-historicas/', VentasHistoricasView.as_view(), name='ventas-historicas'),
+    # path('analytics/ventas-historicas/', VentasHistoricasView.as_view(), name='ventas-historicas'), # Ruta comentada
     path('analytics/ventas-mensuales/', VentasMensualesView.as_view(), name='ventas-mensuales'),
     path('analytics/top-productos/', TopProductosVendidosView.as_view(), name='top-productos'),
     path('analytics/estado-inventario/', EstadoInventarioView.as_view(), name='estado-inventario'),
-    path('analytics/compras-proveedor/', ComprasPorProveedorView.as_view(), name='compras-proveedor'),
-    path('analytics/lead-time-proveedor/', LeadTimePorProveedorView.as_view(), name='lead-time-proveedor'),
+    # path('analytics/compras-proveedor/', ComprasPorProveedorView.as_view(), name='compras-proveedor'), # Ruta comentada
+    # path('analytics/lead-time-proveedor/', LeadTimePorProveedorView.as_view(), name='lead-time-proveedor'), # Ruta comentada
     
     # 👇 --- RUTA CLAVE PARA LA TABLA DE PROYECCIONES ---
     path('productos/proyecciones/', ProductoProyeccionesView.as_view(), name='producto-proyecciones'),

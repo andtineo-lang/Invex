@@ -17,6 +17,11 @@ const userService = {
 
   remove(userId) {
     return apiClient.delete(`usuarios/${userId}/`);
+  },
+
+  // 👇 MÉTODO AÑADIDO PARA CAMBIAR LA CONTRASEÑA
+  changePassword(passwordData) {
+    return apiClient.put('users/change-password/', passwordData);
   }
 };
 
