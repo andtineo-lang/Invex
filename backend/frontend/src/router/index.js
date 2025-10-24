@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { useAuthStore } from '../stores/auth.js' // 👈 1. Importa el store
+import { useAuthStore } from '../stores/auth.js'
 
 // --- 1. LAYOUTS ---
 import PublicLayout from '../layouts/PublicLayout.vue'
@@ -10,6 +10,8 @@ import Principal from '../components/principal.vue'
 import Login from '../components/Login.vue'
 import Registro from '../components/Registro.vue'
 import ConfirmacionPago from '../components/ConfirmacionPago.vue'
+import RecuperarPassword from '../components/RecuperarPassword.vue'
+import ResetPasswordConfirm from '../components/ResetPasswordConfirm.vue' // 👈 1. AÑADIDO
 
 // --- 3. VISTAS DEL DASHBOARD ---
 import Inventario from '../components/inventario.vue'
@@ -29,7 +31,9 @@ const routes = [
       { path: '', name: 'Principal', component: Principal },
       { path: 'login', name: 'Login', component: Login },
       { path: 'registro', name: 'Registro', component: Registro },
-      { path: 'pago/confirmacion', name: 'ConfirmacionPago', component: ConfirmacionPago }
+      { path: 'pago/confirmacion', name: 'ConfirmacionPago', component: ConfirmacionPago },
+      { path: 'recuperar-password', name: 'RecuperarPassword', component: RecuperarPassword },
+      { path: 'reset-password', name: 'ResetPasswordConfirm', component: ResetPasswordConfirm } // 👈 2. AÑADIDO
     ]
   },
 
@@ -57,10 +61,8 @@ const router = createRouter({
 
 // --- 4. GUARDIÁN DE NAVEGACIÓN (CONECTADO A PINIA) ---
 router.beforeEach((to, from, next) => {
-  // 👈 2. Obtiene una instancia del store DENTRO del guardián
   const authStore = useAuthStore()
 
-  // 👈 3. Lee el estado de autenticación y el rol DESDE EL STORE
   const isAuthenticated = authStore.isAuthenticated;
   const userRole = authStore.userRole;
 

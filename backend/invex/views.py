@@ -1,14 +1,18 @@
-# invex/views.py
-
 import os
 import re
 from unidecode import unidecode
 from datetime import timedelta
+
 from django.db import transaction
 from django.utils import timezone
 from django.contrib.auth import get_user_model
 from django.core.mail import send_mail
 from django.utils.crypto import get_random_string
+# 👇 --- IMPORTS PARA RESETEO ---
+from django.contrib.auth.tokens import default_token_generator
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.utils.encoding import force_bytes, force_str
+# ---------------------------
 from django.db.models import Sum, Avg, F, ExpressionWrapper, DurationField
 from django.db.models.functions import TruncMonth
 from rest_framework import viewsets, generics, status, serializers
@@ -55,6 +59,120 @@ class CustomLoginView(APIView):
         except UsuarioEmpresa.DoesNotExist:
             return Response({"detail": f"Acceso denegado a la empresa '{empresa_nombre}'."}, status=status.HTTP_403_FORBIDDEN)
 
+class RegisterAndActivateView(APIView):
+    permission_classes = [AllowAny]
+    def post(self, request, *args, **kwargs):
+        serializer = FullRegistrationSerializer(data=request.data.get('registration'))
+        if serializer.is_valid():
+            user = serializer.save()
+            empresa = user.relaciones.first().empresa
+            refresh = RefreshToken.for_user(user)
+            return Response({
+                'message': '¡Usuario y suscripción creados exitosamente!',
+                'token': str(refresh.access_token),
+                'rol': 'admin',
+                'empresa_id': empresa.id
+            }, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+# --- VISTA PARA SOLICITUD DE RESETEO ---
+class PasswordResetRequestView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        email = request.data.get('email')
+        if not email:
+            return Response({'error': 'Email es requerido.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            # 1. Busca al usuario
+            user = Usuario.objects.get(email=email)
+        except Usuario.DoesNotExist:
+            # 2. Si no existe, no lo reveles (seguridad)
+            return Response(
+                {'message': 'Si una cuenta con este email existe, se ha enviado un enlace de recuperación.'}, 
+                status=status.HTTP_200_OK
+            )
+
+        # 3. Genera token y UID
+        uidb64 = urlsafe_base64_encode(force_bytes(user.pk))
+        token = default_token_generator.make_token(user)
+
+        # 4. Construye el enlace (usa FRONTEND_URL de settings.py)
+        frontend_url = os.environ.get('FRONTEND_URL', 'http://localhost:8080')
+        reset_link = f'{frontend_url}/reset-password?uidb64={uidb64}&token={token}'
+
+        # 5. Envía el email
+        try:
+            send_mail(
+                subject='Restablece tu contraseña de INVEX',
+                message=(
+                    f'Hola {user.nombre},\n\n'
+                    'Recibimos una solicitud para restablecer tu contraseña para tu cuenta de INVEX.\n'
+                    'Por favor, haz clic en el siguiente enlace para establecer una nueva contraseña:\n\n'
+                    f'{reset_link}\n\n'
+                    'Si no solicitaste esto, puedes ignorar este correo de forma segura.\n'
+                    f'Este enlace expirará (revisa tu config de settings.py).\n\n'
+                    'El equipo de INVEX.'
+                ),
+                from_email=os.environ.get('EMAIL_HOST_USER'),
+                recipient_list=[user.email],
+                fail_silently=False,
+            )
+        except Exception as e:
+            print(f"Error al enviar email de reseteo a {email}: {e}")
+        
+        # 6. Envía respuesta genérica de éxito
+        return Response(
+            {'message': 'Si una cuenta con este email existe, se ha enviado un enlace de recuperación.'}, 
+            status=status.HTTP_200_OK
+        )
+
+# --- VISTA PARA CONFIRMAR EL RESETEO ---
+class PasswordResetConfirmView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request, *args, **kwargs):
+        # 1. Obtener los datos del frontend
+        uidb64 = request.data.get('uidb64')
+        token = request.data.get('token')
+        new_password = request.data.get('new_password')
+
+        # 2. Validar que todos los datos estén
+        if not all([uidb64, token, new_password]):
+            return Response(
+                {'error': 'Se requieren todos los campos (uid, token, contraseña).'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # 3. Decodificar el UID y obtener el usuario
+        try:
+            user_id = force_str(urlsafe_base64_decode(uidb64))
+            user = Usuario.objects.get(pk=user_id)
+        except (TypeError, ValueError, OverflowError, Usuario.DoesNotExist):
+            user = None
+
+        # 4. Validar el usuario y el token (si el token expiró, esto dará False)
+        if user is not None and default_token_generator.check_token(user, token):
+            
+            # 5. El token es válido, establecer la nueva contraseña
+            user.set_password(new_password)
+            
+            if hasattr(user, 'mostrar_tutorial') and user.mostrar_tutorial:
+                user.mostrar_tutorial = False
+                
+            user.save()
+            
+            # 6. Enviar respuesta de éxito
+            return Response({'message': '¡Contraseña actualizada con éxito!'}, status=status.HTTP_200_OK)
+        else:
+            # 7. El token es inválido o el usuario no existe
+            return Response(
+                {'error': 'El enlace de reseteo no es válido o ha expirado. Por favor, solicita uno nuevo.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+# -----------------------------------------------------
+
 class ChangePasswordView(generics.UpdateAPIView):
     serializer_class = ChangePasswordSerializer
     model = Usuario
@@ -95,22 +213,6 @@ class MarcarTutorialVistoView(APIView):
             user.mostrar_tutorial = False
             user.save(update_fields=['mostrar_tutorial'])
         return Response({"status": "ok"}, status=status.HTTP_200_OK)
-
-class RegisterAndActivateView(APIView):
-    permission_classes = [AllowAny]
-    def post(self, request, *args, **kwargs):
-        serializer = FullRegistrationSerializer(data=request.data.get('registration'))
-        if serializer.is_valid():
-            user = serializer.save()
-            empresa = user.relaciones.first().empresa
-            refresh = RefreshToken.for_user(user)
-            return Response({
-                'message': '¡Usuario y suscripción creados exitosamente!',
-                'token': str(refresh.access_token),
-                'rol': 'admin',
-                'empresa_id': empresa.id
-            }, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 # ===============================================
 # SECCIÓN DE GESTIÓN DE USUARIOS
@@ -301,7 +403,10 @@ class VentasMensualesView(APIView):
     def get(self, request, *args, **kwargs):
         relacion = request.user.relaciones.first()
         if not relacion: return Response({"error": "Usuario no asociado a una empresa."}, status=status.HTTP_400_BAD_REQUEST)
-        ventas_por_mes = Movimiento.objects.filter(producto__empresa=relacion.empresa, tipo='venta').annotate(mes=TruncMonth('fecha')).values('mes').annotate(total_vendido=Sum('cantidad')).order_by('mes')
+        
+        # <-- CORREGIDO: Se cambió 'fecha' por 'fecha_compra_producto'
+        ventas_por_mes = Movimiento.objects.filter(producto__empresa=relacion.empresa, tipo='venta').annotate(mes=TruncMonth('fecha_compra_producto')).values('mes').annotate(total_vendido=Sum('cantidad')).order_by('mes')
+        
         formatted_data = [{"time": item['mes'].strftime('%Y-%m-%d'), "value": item['total_vendido']} for item in ventas_por_mes]
         return Response(formatted_data)
 
@@ -325,7 +430,10 @@ class ProductoProyeccionesView(APIView):
         
         stocks = Stock.objects.filter(producto__empresa=relacion.empresa).select_related('producto').order_by('producto__nombre')
         fecha_limite = timezone.now().date() - timedelta(days=90)
-        ventas_recientes = Movimiento.objects.filter(producto__empresa=relacion.empresa, tipo='venta', fecha__gte=fecha_limite).values('producto_id').annotate(total_vendido_90d=Sum('cantidad'))
+        
+        # <-- CORREGIDO: Se cambió 'fecha__gte' por 'fecha_compra_producto__gte'
+        ventas_recientes = Movimiento.objects.filter(producto__empresa=relacion.empresa, tipo='venta', fecha_compra_producto__gte=fecha_limite).values('producto_id').annotate(total_vendido_90d=Sum('cantidad'))
+        
         demanda_map = {item['producto_id']: item['total_vendido_90d'] for item in ventas_recientes}
         
         proyecciones_calculadas = []

@@ -1,5 +1,3 @@
-# invex/urls.py
-
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from django.views.decorators.csrf import csrf_exempt
@@ -7,8 +5,10 @@ from .views import (
     # Se importan todas las vistas necesarias
     # RegistroView, # Comentada porque no existe en views.py
     CustomLoginView,
-    CurrentUserView,
     RegisterAndActivateView,
+    PasswordResetRequestView,
+    PasswordResetConfirmView, # <-- 1. AÑADIDO
+    CurrentUserView,
     MarcarTutorialVistoView,
     CurrentEmpresaView,
     InventarioImportAPIView,
@@ -41,6 +41,11 @@ urlpatterns = [
     # path('auth/registro/', csrf_exempt(RegistroView.as_view()), name='registro'), # Ruta comentada
     path('auth/login/', csrf_exempt(CustomLoginView.as_view()), name='custom-login'),
     path('auth/register-and-activate/', csrf_exempt(RegisterAndActivateView.as_view()), name='register-and-activate'),
+    
+    # --- Rutas de Reseteo de Contraseña ---
+    path('auth/request-password-reset/', csrf_exempt(PasswordResetRequestView.as_view()), name='password-reset-request'),
+    path('auth/reset-password-confirm/', csrf_exempt(PasswordResetConfirmView.as_view()), name='password-reset-confirm'), # <-- 2. AÑADIDO
+
     path('users/me/', CurrentUserView.as_view(), name='current-user'),
     path('users/change-password/', ChangePasswordView.as_view(), name='change-password'),
     path('users/marcar-tutorial-visto/', MarcarTutorialVistoView.as_view(), name='marcar-tutorial-visto'),

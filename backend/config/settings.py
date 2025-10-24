@@ -142,6 +142,17 @@ EMAIL_USE_TLS = True
 EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER')
 EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD')
 
+# ===============================================
+# CONFIGURACIÓN DE RESETEO DE CONTRASEÑA (AÑADIDO)
+# ===============================================
+
+# URL del frontend (para construir los enlaces de reseteo)
+# Asegúrate de añadir FRONTEND_URL=http://localhost:8080 a tu .env
+FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:8080')
+
+# Tiempo de vida del token de reseteo en segundos
+# 86400 segundos = 1 día
+PASSWORD_RESET_TIMEOUT = 86400
 
 # ===============================================
 # CONFIGURACIONES DE DRF, CORS y JWT
