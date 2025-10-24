@@ -2,46 +2,59 @@
   <main class="main-content">
     <div class="login-container">
       <div class="login-left">
-        <h2>🔒 ¿Problemas para ingresar?</h2>
-        <p>No te preocupes, te ayudaremos a recuperar tu acceso en un instante.</p>
+        <h2>🔑 Crea tu nueva clave</h2>
+        <p>Casi listo. Define una nueva contraseña segura para tu cuenta.</p>
         <ul class="benefits">
-          <li>✔️ Ingresa tu correo</li>
-          <li>📧 Recibirás un enlace seguro</li>
-          <li>✨ Podrás crear una nueva contraseña</li>
+          <li>🔒 Mínimo 8 caracteres</li>
+          <li>👀 Asegúrate de que coincidan</li>
+          <li>🚀 Guarda y vuelve a ingresar</li>
         </ul>
       </div>
 
       <div class="login-right">
-        <form id="msform" @submit.prevent="handleRequestReset">
+        <form id="msform" @submit.prevent="handleResetPassword">
           <fieldset v-if="!successMessage">
-            <h2 class="fs-title">Recuperar Contraseña</h2>
+            <h2 class="fs-title">Establecer nueva contraseña</h2>
             <p class="fs-subtitle" style="text-align: center; margin-bottom: 20px;">
-              Ingresa tu email y te enviaremos un enlace para restablecer tu contraseña.
+              Por favor, ingresa tu nueva contraseña.
             </p>
 
-            <input 
-              type="email" 
-              v-model="email" 
-              placeholder="Correo electrónico" 
-              required 
-            />
+            <div class="password-container">
+              <input 
+                :type="showPassword ? 'text' : 'password'" 
+                v-model="form.new_password" 
+                placeholder="Nueva Contraseña" 
+                required 
+              />
+              <span class="toggle-password" @click="showPassword = !showPassword" :title="showPassword ? 'Ocultar' : 'Mostrar'">
+                {{ showPassword ? '🙈' : '👁️' }}
+              </span>
+            </div>
+
+            <div class="password-container">
+              <input 
+                :type="showPassword2 ? 'text' : 'password'" 
+                v-model="form.confirm_password" 
+                placeholder="Confirmar Contraseña" 
+                required 
+              />
+              <span class="toggle-password" @click="showPassword2 = !showPassword2" :title="showPassword2 ? 'Ocultar' : 'Mostrar'">
+                {{ showPassword2 ? '🙈' : '👁️' }}
+              </span>
+            </div>
             
             <button type="submit" class="action-button submit" :disabled="isLoading">
-              <span v-if="!isLoading">Enviar enlace</span>
+              <span v-if="!isLoading">Guardar nueva contraseña</span>
               <span v-else class="spinner"></span>
             </button>
-            
-            <p class="fs-subtitle" style="margin-top: 20px;">
-              <router-link to="/login">Volver a Inicio de Sesión</router-link>
-            </p>
           </fieldset>
         </form>
 
         <div v-if="successMessage" class="success-message-box">
-          <h2 class="fs-title">📬 Revisa tu correo</h2>
+          <h2 class="fs-title">✅ ¡Éxito!</h2>
           <p>{{ successMessage }}</p>
           <router-link to="/login" class="action-button submit" style="text-decoration: none; max-width: 200px;">
-            Volver a Inicio de Sesión
+            Ir a Inicio de Sesión
           </router-link>
         </div>
       </div>
@@ -58,14 +71,23 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, reactive, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
 // Asumo que tu instancia de axios está aquí
 import axiosInstance from '@/api/axios.js'; 
 
 // --- Estado del Componente ---
-const email = ref('');
+const router = useRouter();
+const form = reactive({
+  new_password: '',
+  confirm_password: '',
+  uidb64: null,
+  token: null,
+});
 const isLoading = ref(false);
-const successMessage = ref(''); // Para el mensaje de éxito
+const successMessage = ref('');
+const showPassword = ref(false);
+const showPassword2 = ref(false);
 
 // --- Estado del Modal (copiado de Login.vue) ---
 const showModal = ref(false);
@@ -79,31 +101,55 @@ const openModal = (title, message) => {
 };
 
 // --- Lógica de Envío ---
-const handleRequestReset = async () => {
-  if (!email.value) {
-    openModal('⚠️ Campo incompleto', 'Por favor, ingresa tu correo electrónico.');
+const handleResetPassword = async () => {
+  // Validaciones primero
+  if (!form.new_password || !form.confirm_password) {
+    openModal('⚠️ Campos incompletos', 'Por favor, completa ambos campos de contraseña.');
     return;
   }
-  
+  if (form.new_password !== form.confirm_password) {
+    openModal('⚠️ Error', 'Las contraseñas no coinciden.');
+    return;
+  }
+  if (form.new_password.length < 8) {
+    openModal('⚠️ Contraseña corta', 'La contraseña debe tener al menos 8 caracteres.');
+    return;
+  }
+
   isLoading.value = true;
 
   try {
     // Usamos la URL del backend que ya creamos
-    await axiosInstance.post('/auth/request-password-reset/', {
-      email: email.value
+    await axiosInstance.post('/auth/reset-password-confirm/', {
+      uidb64: form.uidb64,
+      token: form.token,
+      new_password: form.new_password
     });
 
-    // Éxito: Mostramos el mensaje de éxito (no un modal)
-    successMessage.value = 'Si una cuenta con ese email existe, recibirás un enlace de recuperación pronto.';
+    // Éxito: Mostramos el mensaje de éxito
+    successMessage.value = '¡Contraseña actualizada con éxito! Ya puedes iniciar sesión.';
 
   } catch (error) {
-    console.error("❌ Error al solicitar reseteo:", error);
+    console.error("❌ Error al confirmar reseteo:", error);
     // Error: Usamos el modal
-    openModal('❌ Error', 'Ocurrió un error. Por favor, inténtalo de nuevo más tarde.');
+    const detail = error.response?.data?.error || 'El enlace de reseteo no es válido o ha expirado. Por favor, solicita uno nuevo.';
+    openModal('❌ Error en el enlace', detail);
   } finally {
     isLoading.value = false;
   }
 };
+
+// --- Carga Inicial (reemplaza a 'created') ---
+onMounted(() => {
+  // Leemos los parámetros de la URL
+  form.uidb64 = router.currentRoute.value.query.uidb64;
+  form.token = router.currentRoute.value.query.token;
+
+  // Si faltan, mostramos un error en el modal
+  if (!form.uidb64 || !form.token) {
+    openModal('❌ Enlace Inválido', 'El enlace de recuperación está incompleto o malformado.');
+  }
+});
 </script>
 
 <style scoped>
