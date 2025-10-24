@@ -94,13 +94,20 @@ const handleLogin = async () => {
     console.log("✅ Paso 1: Login API exitoso.", loginResponse.data); // LOG 2
 
     const accessToken = loginResponse.data.access;
+    const refreshToken = loginResponse.data.refresh; // 👈 1. AÑADIDO: Captura el refresh token
     const userRole = loginResponse.data.rol;
-    const empresaId = loginResponse.data.empresa_id; // 💥 CAPTURAR el nuevo campo empresa_id
+    const empresaId = loginResponse.data.empresa_id; 
+    
+    // 👇 --- AÑADIDO: Guarda los tokens en localStorage ---
+    // Esto es lo que usará tu interceptor de axios.js
+    localStorage.setItem('access_token', accessToken);
+    localStorage.setItem('refresh_token', refreshToken);
+    // ----------------------------------------------------
 
-    // 💥 MODIFICAR: Pasar el tercer argumento (empresaId) al store
+    // Esto sigue siendo útil para que Pinia sepa el estado
     authStore.loginSuccess(accessToken, userRole, empresaId);
     console.log("✅ Paso 2: Store de Pinia actualizado. Autenticado:", authStore.isAuthenticated); // LOG 3
-    console.log(`✅ ID de Empresa guardado: ${empresaId}`); // Nuevo LOG para confirmación
+    console.log(`✅ ID de Empresa guardado: ${empresaId}`); 
 
     await axiosInstance.get('/users/me/');
     console.log("✅ Paso 3: Verificación de usuario (/users/me) exitosa."); // LOG 4
@@ -110,6 +117,10 @@ const handleLogin = async () => {
     
   } catch (error) {
     console.error("❌ Ocurrió un error en el bloque try:", error); // LOG DE ERROR
+    
+    // Limpia el localStorage si el login falla
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
     authStore.logout();
 
     const detail = error.response?.data?.detail || 'No se pudo conectar con el servidor.';
