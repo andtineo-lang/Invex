@@ -1,3 +1,5 @@
+# invex/serializers.py (VERSIÓN FINAL CORREGIDA)
+
 from rest_framework import serializers
 from django.db import transaction
 from django.utils import timezone
@@ -20,42 +22,24 @@ from .models import (
 # ====================================================================
 
 class UserManagementSerializer(serializers.ModelSerializer):
-    """
-    Serializador final que maneja la creación o actualización de una relación Usuario-Empresa.
-    """
-    # Campos para LEER (se muestran en la respuesta de la API)
     name = serializers.CharField(source='usuario.nombre', read_only=True)
     email = serializers.EmailField(source='usuario.email', read_only=True)
-
-    # Campo para ESCRIBIR (viene en la petición para crear)
     nombre_completo = serializers.CharField(write_only=True)
 
     class Meta:
         model = UsuarioEmpresa
-        fields = [
-            'id',
-            'name',
-            'email',
-            'rol',
-            'nombre_completo'
-        ]
+        fields = ['id', 'name', 'email', 'rol', 'nombre_completo']
         read_only_fields = ['id', 'name', 'email']
 
     def create(self, validated_data):
-        """
-        Este método ahora usa 'get_or_create' para buscar o crear la relación.
-        """
-        # Quitamos 'nombre_completo' porque no es parte del modelo UsuarioEmpresa
         validated_data.pop('nombre_completo', None)
         
-        # Usamos get_or_create para buscar o crear la relación
         instancia, creada = UsuarioEmpresa.objects.get_or_create(
             usuario=validated_data.get('usuario'),
             empresa=validated_data.get('empresa'),
             defaults={'rol': validated_data.get('rol')}
         )
 
-        # Si la relación no fue creada (ya existía) y el rol es diferente, lo actualizamos
         if not creada and instancia.rol != validated_data.get('rol'):
             instancia.rol = validated_data.get('rol')
             instancia.save()
@@ -89,6 +73,7 @@ class RegistroSerializer(serializers.Serializer):
         UsuarioEmpresa.objects.get_or_create(usuario=usuario, empresa=empresa, defaults={'rol': rol})
         return {"usuario": usuario, "empresa": empresa, "rol": rol}
 
+
 class FullRegistrationSerializer(serializers.Serializer):
     name = serializers.CharField(max_length=255)
     email = serializers.EmailField()
@@ -116,11 +101,8 @@ class FullRegistrationSerializer(serializers.Serializer):
             rubro=validated_data['industry'],
             owner=user
         )
-        UsuarioEmpresa.objects.create(
-            usuario=user,
-            empresa=empresa,
-            rol='admin'
-        )
+        UsuarioEmpresa.objects.create(usuario=user, empresa=empresa, rol='admin')
+        
         plan_map = {'Plan Trimestral': '3m', 'Plan Semestral': '6m', 'Plan Anual': '1y'}
         plan_tipo = plan_map.get(validated_data['plan'])
         if not plan_tipo:
@@ -131,7 +113,7 @@ class FullRegistrationSerializer(serializers.Serializer):
             fecha_fin = fecha_inicio + relativedelta(months=+3)
         elif plan_tipo == '6m':
             fecha_fin = fecha_inicio + relativedelta(months=+6)
-        else: # '1y'
+        else:
             fecha_fin = fecha_inicio + relativedelta(years=+1)
             
         Suscripcion.objects.create(
@@ -142,54 +124,65 @@ class FullRegistrationSerializer(serializers.Serializer):
         )
         return user
 
+
 # ---------------------------
 # SERIALIZADOR DE IMPORTACIÓN MASIVA
 # ---------------------------
-class InventarioImportSerializer(serializers.Serializer):
-    """
-    Serializador para procesar la lista de objetos de importación
-    desde Excel para Producto, Stock y Movimiento.
-    """
+
+class ProductoImportSerializer(serializers.Serializer):
     nombre = serializers.CharField(max_length=255)
     stock_actual = serializers.IntegerField(required=False, default=0, allow_null=True)
-    categoria = serializers.CharField(max_length=255, required=False, allow_null=True)
-    unidad_medida = serializers.CharField(max_length=50, required=False, allow_null=True)
+    categoria = serializers.CharField(max_length=255, required=False, allow_null=True, allow_blank=True)
+    unidad_medida = serializers.CharField(max_length=50, required=False, allow_null=True, allow_blank=True)
     cantidad_comprada = serializers.IntegerField(required=False, default=None, allow_null=True)
     cantidad_vendida = serializers.IntegerField(required=False, default=None, allow_null=True)
-    proveedor = serializers.CharField(max_length=255, required=False, allow_null=True)
-    fecha_compra_producto = serializers.DateField(required=False, allow_null=True) 
+    proveedor = serializers.CharField(max_length=255, required=False, allow_null=True, allow_blank=True)
     fecha_pedido = serializers.DateField(required=False, allow_null=True)
     fecha_recepcion = serializers.DateField(required=False, allow_null=True)
+
+
+class MasterImportSerializer(serializers.Serializer):
+    productos = ProductoImportSerializer(many=True)
+    historial_ventas = serializers.ListField(child=serializers.DictField(), required=False)
+    historial_compras = serializers.ListField(child=serializers.DictField(), required=False)
+
 
 # ---------------------------
 # SERIALIZERS DE MODELOS (PARA CRUD)
 # ---------------------------
+
 class UsuarioSerializer(serializers.ModelSerializer):
     class Meta:
         model = Usuario
         fields = ['id', 'email', 'nombre', 'mostrar_tutorial'] 
+
 
 class EmpresaSerializer(serializers.ModelSerializer):
     class Meta:
         model = Empresa
         fields = ['id', 'nombre', 'rut', 'rubro', 'owner', 'fecha_creacion']
 
+
 class UsuarioEmpresaSerializer(serializers.ModelSerializer):
     usuario = UsuarioSerializer(read_only=True)
     empresa = EmpresaSerializer(read_only=True)
+    
     class Meta:
         model = UsuarioEmpresa
         fields = ['usuario', 'empresa', 'rol']
+
 
 class CategoriaSerializer(serializers.ModelSerializer):
     class Meta:
         model = Categoria
         fields = '__all__'
 
+
 class StockWriteSerializer(serializers.ModelSerializer):
     class Meta:
         model = Stock
         fields = ['stock_actual', 'stock_transito', 'ventas_proyectadas', 'demanda_estacional']
+
 
 class ProductoSerializer(serializers.ModelSerializer):
     stock = serializers.SerializerMethodField()
@@ -214,24 +207,37 @@ class ProductoSerializer(serializers.ModelSerializer):
         return obj.stocks.first()
 
     def get_stock(self, obj):
-        stock_obj = self.get_first_stock(obj); return stock_obj.stock_actual if stock_obj else 0
+        stock_obj = self.get_first_stock(obj)
+        return stock_obj.stock_actual if stock_obj else 0
+    
     def get_inTransit(self, obj):
-        stock_obj = self.get_first_stock(obj); return stock_obj.stock_transito if stock_obj else 0
+        stock_obj = self.get_first_stock(obj)
+        return stock_obj.stock_transito if stock_obj else 0
+    
     def get_projectedSales(self, obj):
-        stock_obj = self.get_first_stock(obj); return stock_obj.ventas_proyectadas if stock_obj else 0
+        stock_obj = self.get_first_stock(obj)
+        return stock_obj.ventas_proyectadas if stock_obj else 0
+    
     def get_seasonal(self, obj):
-        stock_obj = self.get_first_stock(obj); return stock_obj.demanda_estacional if stock_obj else "Normal"
+        stock_obj = self.get_first_stock(obj)
+        return stock_obj.demanda_estacional if stock_obj else "Normal"
+    
     def get_proyeccion_status(self, obj):
-        stock_obj = self.get_first_stock(obj); return stock_obj.proyeccion_status if stock_obj else "N/A"
+        stock_obj = self.get_first_stock(obj)
+        return stock_obj.proyeccion_status if stock_obj else "N/A"
+    
     def get_proyeccion_cantidad(self, obj):
-        stock_obj = self.get_first_stock(obj); return stock_obj.proyeccion_cantidad_a_comprar if stock_obj else 0
+        stock_obj = self.get_first_stock(obj)
+        return stock_obj.proyeccion_cantidad_a_comprar if stock_obj else 0
 
     def create(self, validated_data):
         stock_data = validated_data.pop('stock_data')
         request = self.context.get('request')
-        if not request or not hasattr(request, 'user'): raise serializers.ValidationError("Contexto de request no encontrado.")
+        if not request or not hasattr(request, 'user'):
+            raise serializers.ValidationError("Contexto de request no encontrado.")
         relacion = request.user.relaciones.first()
-        if not relacion: raise serializers.ValidationError("El usuario no está asociado a ninguna empresa.")
+        if not relacion:
+            raise serializers.ValidationError("El usuario no está asociado a ninguna empresa.")
         producto = Producto.objects.create(empresa=relacion.empresa, **validated_data)
         Stock.objects.create(producto=producto, **stock_data)
         return producto
@@ -245,26 +251,39 @@ class ProductoSerializer(serializers.ModelSerializer):
                 stock_serializer.is_valid(raise_exception=True)
                 stock_serializer.save()
         return super().update(instance, validated_data)
-        
+
+
 class SuscripcionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Suscripcion
         fields = '__all__'
+
 
 class DiaImportanteSerializer(serializers.ModelSerializer):
     class Meta:
         model = DiaImportante
         fields = ['id', 'nombre_evento', 'fecha', 'descripcion']
 
-# 👇 --- SERIALIZER AÑADIDO PARA CÁLCULOS DINÁMICOS --- 👇
+
+# ====================================================================
+# 🆕 SERIALIZER PARA PROYECCIONES CALCULADAS (CORREGIDO)
+# ====================================================================
+
 class ProyeccionCalculadaSerializer(serializers.Serializer):
     """
-    Este serializer no usa un modelo. Se utiliza para dar formato a los datos 
-    de proyección que calculamos manualmente en la vista.
+    Serializer para datos de proyección calculados dinámicamente.
+    🆕 AÑADIDO: Campos para predicción inteligente de compras basada en lead time.
     """
     id = serializers.IntegerField()
+    producto_id = serializers.IntegerField(required=False)
     producto_nombre = serializers.CharField()
     stock_actual = serializers.IntegerField()
     demanda_semanal_proyectada = serializers.FloatField()
-    semanas_cobertura = serializers.FloatField()
+    semanas_cobertura = serializers.FloatField(allow_null=True)
     estado = serializers.CharField()
+    cantidad_sugerida = serializers.IntegerField()
+    # 🆕 NUEVOS CAMPOS PARA PREDICCIÓN DE COMPRAS
+    lead_time_dias = serializers.IntegerField()  # Tiempo de entrega del proveedor (días)
+    lead_time_semanas = serializers.FloatField()  # Tiempo de entrega (semanas)
+    punto_reorden = serializers.IntegerField()  # Stock mínimo antes de comprar
+    dias_para_comprar = serializers.IntegerField(allow_null=True)  # En cuántos días debes comprar (null = no aplica)
