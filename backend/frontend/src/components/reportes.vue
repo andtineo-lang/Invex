@@ -12,6 +12,7 @@
       </div>
     </div>
 
+    <!-- KPIs Cards -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
       <div class="bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-lg shadow-lg p-6 text-white">
         <h3 class="text-lg font-semibold mb-2">Tasa de Cumplimiento</h3>
@@ -41,6 +42,7 @@
       </div>
     </div>
 
+    <!-- Charts -->
     <div class="mb-8">
       <div class="flex items-center space-x-2 mb-4">
         <svg class="w-6 h-6 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -78,6 +80,7 @@
       </div>
     </div>
 
+    <!-- AI Report Content -->
     <div v-if="aiReportContent" class="mb-8 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg shadow-lg p-6 border-2 border-purple-200">
       <div class="flex items-center space-x-2 mb-4">
         <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -88,6 +91,7 @@
       <div class="prose prose-sm max-w-none text-gray-700" v-html="formatMarkdown(aiReportContent)"></div>
     </div>
 
+    <!-- Action Buttons -->
     <div class="flex justify-center gap-4 mb-8">
       <button 
         v-if="aiEnabled"
@@ -103,8 +107,8 @@
           <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
         </svg>
         <span v-if="isGeneratingAI">Generando análisis con IA...</span>
-        <span v-else-if="downloading">Creando ...</span>
-        <span v-else>🤖 Generar Reporte con IA </span>
+        <span v-else-if="downloading">Creando PDF...</span>
+        <span v-else>🤖 Generar Reporte con IA</span>
       </button>
 
       <button 
@@ -120,6 +124,7 @@
       </button>
     </div>
 
+    <!-- Products Table -->
     <div class="bg-white rounded-lg shadow-lg overflow-hidden">
       <div class="px-6 py-4 border-b border-gray-200">
         <h3 class="text-lg font-bold text-gray-900">Análisis Detallado por Producto</h3>
@@ -181,6 +186,7 @@
       </div>
     </div>
 
+    <!-- Bottom KPIs -->
     <div class="mt-8 grid grid-cols-1 md:grid-cols-4 gap-4">
       <div class="bg-white rounded-lg shadow p-4">
         <div class="text-sm text-gray-500 mb-1">Total Ventas (unidades)</div>
@@ -222,54 +228,51 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, computed } from 'vue';
+import { ref, reactive, computed, onMounted } from 'vue';
 import axiosInstance from '@/api/axios.js';
 import VueApexCharts from 'vue3-apexcharts';
+
+// ==========================================
+// TOON IMPORT (SIN AWAIT)
+// ==========================================
+
+let toTOON = null;
+let toonDisponible = false;
+
+// Cargar TOON de forma asíncrona sin bloquear
+import('@toon-format/toon').then(toonModule => {
+  toTOON = toonModule.encode;
+  toonDisponible = true;
+  console.log('✅ TOON cargado correctamente - Se usará optimización de tokens');
+}).catch(() => {
+  console.warn('⚠️ TOON no disponible - Se usará JSON estándar');
+  toonDisponible = false;
+});
 
 // ==========================================
 // GEMINI AI INITIALIZATION
 // ==========================================
 
-// ❗ CAMBIO 1: 'model' ahora es una 'ref' para ser reactivo.
 const model = ref(null);
-
-// ✅ Obtener API Key desde variables de entorno de Vue CLI
 const GEMINI_API_KEY = process.env.VUE_APP_GEMINI_API_KEY;
 
 console.log('🔑 API Key detectada:', GEMINI_API_KEY ? 'SÍ ✅' : 'NO ❌');
 
-
-// Try to initialize Gemini (async but not awaited)
-const initGemini = async () => {
-  try {
-    const { GoogleGenerativeAI } = await import('@google/generative-ai');
-    
+const initGemini = () => {
+  import('@google/generative-ai').then(({ GoogleGenerativeAI }) => {
     if (GEMINI_API_KEY) {
       const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-      
-      // ❗ CAMBIO 2: Usamos model.value y un modelo estable 
       model.value = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-      
+      geminiReady.value = true;
       console.log('✅ Gemini AI inicializado correctamente');
-      return true;
     } else {
-      console.warn('⚠️ API Key de Gemini no configurada. La funcionalidad de IA estará deshabilitada.');
-      console.warn('   Crea un archivo .env con: VUE_APP_GEMINI_API_KEY=tu_api_key');
-      return false;
+      console.warn('⚠️ API Key de Gemini no configurada.');
     }
-  } catch (error) {
-    console.warn('⚠️ No se pudo cargar @google/generative-ai. La funcionalidad de IA estará deshabilitada.');
-    console.warn('   Instala con: npm install @google/generative-ai');
-    console.error('   Error:', error.message);
-    return false;
-  }
+  }).catch(error => {
+    console.warn('⚠️ No se pudo cargar @google/generative-ai.');
+    console.error('Error:', error.message);
+  });
 };
-
-// Start initialization (non-blocking)
-const geminiReady = ref(false);
-initGemini().then(ready => {
-  geminiReady.value = ready;
-});
 
 // ==========================================
 // STATE MANAGEMENT
@@ -284,11 +287,10 @@ const downloading = ref(false);
 const cdnLoaded = ref(false);
 const isGeneratingAI = ref(false);
 const aiReportContent = ref(null);
+const geminiReady = ref(false);
 
-// ❗ CAMBIO 3: La propiedad computada ahora lee 'model.value'.
 const aiEnabled = computed(() => !!(GEMINI_API_KEY && model.value && geminiReady.value));
 
-// Data containers
 const proyecciones = ref([]);
 const kpisData = reactive({
   tasa_cumplimiento: 0,
@@ -378,10 +380,11 @@ const leadTimeChartOptions = reactive({
 // ==========================================
 
 onMounted(async () => {
+  initGemini();
+  
   try {
     await loadJsPdfCdn();
     console.log('✅ jsPDF CDN cargado correctamente');
-    
     await loadDashboardData();
   } catch (error) {
     console.error("Error en la carga inicial:", error);
@@ -439,38 +442,22 @@ const updateLeadTimeChart = (leadTimeData) => {
 // ==========================================
 
 const formatSemanasCobertura = (semanas) => {
-  if (semanas === null || semanas === undefined) {
-    return 'Sin demanda';
-  }
-  if (!isFinite(semanas)) {
-    return 'N/A';
-  }
+  if (semanas === null || semanas === undefined) return 'Sin demanda';
+  if (!isFinite(semanas)) return 'N/A';
   return semanas.toFixed(1);
 };
 
 const formatDiasComprar = (dias) => {
-  if (dias === null || dias === undefined) {
-    return 'N/A';
-  }
-  if (dias === 0) {
-    return '¡AHORA!';
-  }
-  if (dias < 0) {
-    return 'URGENTE';
-  }
+  if (dias === null || dias === undefined) return 'N/A';
+  if (dias === 0) return '¡AHORA!';
+  if (dias < 0) return 'URGENTE';
   return `${dias} días`;
 };
 
 const getDiasComprarClass = (dias) => {
-  if (dias === null || dias === undefined) {
-    return 'text-gray-500';
-  }
-  if (dias === 0 || dias < 0) {
-    return 'text-red-600 font-bold';
-  }
-  if (dias <= 7) {
-    return 'text-orange-600 font-semibold';
-  }
+  if (dias === null || dias === undefined) return 'text-gray-500';
+  if (dias === 0 || dias < 0) return 'text-red-600 font-bold';
+  if (dias <= 7) return 'text-orange-600 font-semibold';
   return 'text-gray-900';
 };
 
@@ -505,82 +492,105 @@ const generarReporteConIA = async () => {
   console.log('🤖 Iniciando generación de reporte con IA...');
   
   if (!aiEnabled.value) {
-    alert("⚠️ Gemini AI no está disponible.\n\n" +
-          "Para habilitar esta función:\n" +
-          "1. Instala: npm install @google/generative-ai\n" +
-          "2. Crea archivo .env con: VUE_APP_GEMINI_API_KEY=tu_api_key\n" +
-          "3. Obtén tu API key en: https://makersuite.google.com/app/apikey\n" +
-          "4. Reinicia el servidor con: npm run serve");
+    alert("⚠️ Gemini AI no está disponible.\n\nPara habilitar:\n1. npm install @google/generative-ai\n2. Archivo .env con: VUE_APP_GEMINI_API_KEY=tu_key\n3. npm run serve");
     return null;
   }
 
   isGeneratingAI.value = true;
   aiReportContent.value = null;
 
-  const datosParaIA = {
-    kpis: kpisData,
-    productos_criticos: proyecciones.value.filter(p => p.estado === 'Comprar Ahora').slice(0, 5).map(p => ({
-      nombre: p.producto_nombre,
+  const productosCriticos = proyecciones.value
+    .filter(p => p.estado === 'Comprar Ahora')
+    .slice(0, 5)
+    .map(p => ({
+      nombre: p.producto_nombre.replace(/,/g, ';'),
       stock: p.stock_actual,
-      demanda_semanal: p.demanda_semanal_proyectada,
-      cobertura_semanas: p.semanas_cobertura,
-      comprar: p.cantidad_sugerida,
-      // 🆕 NUEVOS DATOS PARA IA
-      lead_time_dias: p.lead_time_dias,
-      punto_reorden: p.punto_reorden,
-      dias_para_comprar: p.dias_para_comprar
-    })),
-    productos_sobrestock: proyecciones.value.filter(p => p.estado === 'Sobrestock').slice(0, 3).map(p => ({
-      nombre: p.producto_nombre,
+      demanda_sem: parseFloat(p.demanda_semanal_proyectada.toFixed(1)),
+      cobertura_sem: p.semanas_cobertura !== null ? parseFloat(p.semanas_cobertura.toFixed(1)) : 0,
+      comprar: p.cantidad_sugerida || 0,
+      lead_time: p.lead_time_dias,
+      dias_comprar: p.dias_para_comprar
+    }));
+
+  const productosSobrestock = proyecciones.value
+    .filter(p => p.estado === 'Sobrestock')
+    .slice(0, 3)
+    .map(p => ({
+      nombre: p.producto_nombre.replace(/,/g, ';'),
       stock: p.stock_actual,
-      cobertura_semanas: p.semanas_cobertura
-    })),
-    resumen: {
-      total_productos: proyecciones.value.length,
-      productos_ok: proyecciones.value.filter(p => p.estado === 'Stock OK').length,
-      productos_criticos: kpisData.productos_criticos,
-      eficiencia: kpisData.eficiencia_stock
+      cobertura_sem: parseFloat(p.semanas_cobertura.toFixed(1))
+    }));
+
+  const datosCompletos = {
+    productos_criticos: productosCriticos,
+    productos_sobrestock: productosSobrestock,
+    kpis: {
+      tasa_cumplimiento: kpisData.tasa_cumplimiento || 0,
+      dias_cobertura: kpisData.dias_cobertura_promedio || 0,
+      productos_criticos: kpisData.productos_criticos || 0,
+      eficiencia: kpisData.eficiencia_stock || 0
     }
   };
-  
-  console.log('📊 Datos preparados para IA');
-  const datosJSON = JSON.stringify(datosParaIA, null, 2);
 
-  const prompt = `Eres un experto analista de inventarios para una PYME.
-
-Analiza los siguientes datos del inventario y genera un reporte ejecutivo en español con:
-
-1. **Resumen Ejecutivo** (2-3 oraciones sobre la situación general)
-2. **Productos Críticos** (Máximo 3, menciona cuántos días faltan para comprar y el lead time del proveedor)
-3. **Recomendaciones Accionables** (Máximo 3, específicas considerando los tiempos de entrega)
-
-DATOS DEL INVENTARIO:
-${datosJSON}
-
-CONTEXTO IMPORTANTE:
-- "dias_para_comprar": Cuántos días quedan antes de que el stock llegue al punto de reorden
-- "lead_time_dias": Cuántos días tarda el proveedor en entregar el pedido
-- "punto_reorden": Stock mínimo antes de quedarse sin producto
-
-IMPORTANTE:
-- Usa un tono profesional pero directo
-- Sé específico con los productos problemáticos
-- Las recomendaciones deben considerar los tiempos de entrega 
-- Si "dias_para_comprar" es 0 o negativo, es URGENTE
-- Usa formato Markdown simple (**, -, ##)
-- Máximo 300 palabras en total`;
+  let datosFormateados;
+  let formatoUsado;
+  let promptExplicacion;
 
   try {
-    console.log('📡 Enviando solicitud a Gemini AI...');
+    if (toonDisponible && toTOON) {
+      const datosJSON = JSON.stringify(datosCompletos);
+      datosFormateados = toTOON(datosCompletos);
+      formatoUsado = 'TOON';
+      
+      promptExplicacion = `**FORMATO DE DATOS: TOON (Token-Oriented Object Notation)**
+Los datos están en formato compacto. Arrays muestran longitud [N] y campos {}.`;
+
+      console.log('═══════════════════════════════════════════════');
+      console.log('📊 COMPARACIÓN JSON vs TOON');
+      console.log('═══════════════════════════════════════════════');
+      console.log('📦 FORMATO JSON:', datosJSON.length, 'caracteres');
+      console.log('🎨 FORMATO TOON:', datosFormateados.length, 'caracteres');
+      console.log('═══════════════════════════════════════════════');
+      
+    } else {
+      throw new Error('TOON no disponible');
+    }
+  } catch (error) {
+    console.warn('⚠️ Usando JSON como fallback');
+    datosFormateados = JSON.stringify(datosCompletos, null, 2);
+    formatoUsado = 'JSON';
+    promptExplicacion = `**FORMATO DE DATOS: JSON**`;
+  }
+
+  const prompt = `Eres un experto analista de inventarios para PYMEs .
+
+${promptExplicacion}
+
+**DATOS DEL INVENTARIO:**
+${datosFormateados}
+
+**CONTEXTO:**
+- "dias_comprar": Días antes de llegar al punto de reorden (negativo/0 = URGENTE)
+- "lead_time": Días que tarda el proveedor
+- "comprar": Unidades sugeridas
+- "cobertura_sem": Semanas de stock restante
+
+**GENERA UN REPORTE EJECUTIVO EN ESPAÑOL:**
+
+1. **Resumen Ejecutivo** (2-3 oraciones)
+2. **Productos Críticos** (Máximo 3 con urgencia y lead_time)
+3. **Recomendaciones Accionables** (Máximo 3 priorizadas)
+
+**FORMATO:** Markdown simple, tono profesional, máximo 280 palabras`;
+
+  try {
+    console.log(`📡 Enviando prompt a Gemini (formato: ${formatoUsado})...`);
     
-    // ❗ CAMBIO 4: Usamos 'model.value' para llamar a la IA.
     const result = await model.value.generateContent(prompt);
-    
     const response = await result.response;
     const text = response.text();
     
-    console.log('✅ Texto generado:', text.substring(0, 100) + '...');
-    console.log('📝 Longitud del texto:', text.length, 'caracteres');
+    console.log('✅ Respuesta recibida de Gemini');
     
     aiReportContent.value = text;
     isGeneratingAI.value = false;
@@ -589,9 +599,7 @@ IMPORTANTE:
   
   } catch (error) {
     console.error("❌ Error al generar reporte con IA:", error);
-    console.error("Error completo:", error);
-    
-    alert(`Error al conectar con Gemini AI: ${error.message}\n\nEl reporte se generará sin recomendaciones.`);
+    alert(`Error: ${error.message}`);
     isGeneratingAI.value = false;
     return null;
   }
@@ -623,17 +631,16 @@ const loadJsPdfCdn = () => {
         resolve();
       };
       
-      scriptAutoTable.onerror = () => reject(new Error('Error al cargar autoTable CDN'));
+      scriptAutoTable.onerror = () => reject(new Error('Error al cargar autoTable'));
       document.head.appendChild(scriptAutoTable);
     };
     
-    scriptJsPdf.onerror = () => reject(new Error('Error al cargar jsPDF CDN'));
+    scriptJsPdf.onerror = () => reject(new Error('Error al cargar jsPDF'));
     document.head.appendChild(scriptJsPdf);
   });
 };
 
 const generarBasePDF = (doc) => {
-  // Encabezado
   doc.setFontSize(18);
   doc.setTextColor(20, 184, 166);
   doc.text('Reporte de Análisis de Inventario', 14, 20);
@@ -642,7 +649,6 @@ const generarBasePDF = (doc) => {
   doc.setTextColor(100);
   doc.text(`Fecha: ${new Date().toLocaleDateString('es-CL', { year: 'numeric', month: 'long', day: 'numeric' })}`, 14, 27);
   
-  // KPIs Resumen
   doc.setFontSize(12);
   doc.setTextColor(0);
   doc.text('Resumen de Indicadores Clave', 14, 37);
@@ -655,21 +661,13 @@ const generarBasePDF = (doc) => {
   doc.text(`• Unidades en Sobrestock: ${(kpisData.unidades_sobrestock || 0).toLocaleString()} u.`, 16, yPos + 10);
   doc.text(`• Productos Críticos: ${kpisData.productos_criticos || 0}`, 16, yPos + 15);
   
-  // Tabla de productos con NUEVAS columnas
-  const columnas = [
-    'Producto', 
-    'Dem.\n(sem.)', 
-    'Stock', 
-    'Días p/\nComprar',  // 🆕 NUEVA COLUMNA
-    'Compra', 
-    'Estado'
-  ];
+  const columnas = ['Producto', 'Dem.\n(sem.)', 'Stock', 'Días p/\nComprar', 'Compra', 'Estado'];
   
   const filas = proyecciones.value.map(item => [
     item.producto_nombre || 'N/A',
     `${(item.demanda_semanal_proyectada || 0).toFixed(1)}`,
     `${item.stock_actual || 0}`,
-    formatDiasComprar(item.dias_para_comprar),  // 🆕 NUEVO CAMPO
+    formatDiasComprar(item.dias_para_comprar),
     `${(item.cantidad_sugerida || 0).toLocaleString()}`,
     item.estado || 'N/A'
   ]);
@@ -699,10 +697,10 @@ const generarBasePDF = (doc) => {
       fillColor: [245, 247, 250]
     },
     columnStyles: {
-      0: { cellWidth: 'auto' },  // Producto - se ajusta automáticamente
+      0: { cellWidth: 'auto' },
       1: { halign: 'center', cellWidth: 16 },
       2: { halign: 'center', cellWidth: 14 },
-      3: { halign: 'center', cellWidth: 18 },  // 🆕 Días p/ Comprar
+      3: { halign: 'center', cellWidth: 18 },
       4: { halign: 'center', cellWidth: 18 },
       5: { halign: 'center', cellWidth: 22 }
     },
@@ -722,7 +720,7 @@ const agregarPaginaIA = (doc, textoIA) => {
   
   doc.setFontSize(14);
   doc.setTextColor(147, 51, 234);
-  doc.text('🤖 Análisis y Recomendaciones (Gemini AI)', 14, 20);
+  doc.text('🤖 Análisis con IA (Gemini)', 14, 20);
 
   doc.setFontSize(10);
   doc.setTextColor(0);
@@ -735,8 +733,6 @@ const agregarPaginaIA = (doc, textoIA) => {
 
   const lineas = doc.splitTextToSize(textoFormateado, 180);
   doc.text(lineas, 14, 30);
-  
-  console.log('✅ Página de IA añadida correctamente');
 };
 
 const agregarPiePagina = (doc) => {
@@ -766,8 +762,6 @@ const descargarReporteConIA = async () => {
 
   console.log('🤖 Llamando a generarReporteConIA()...');
   const recomendacionesIA = await generarReporteConIA();
-  
-  console.log('📊 Recomendaciones recibidas:', recomendacionesIA ? `SÍ (${recomendacionesIA.length} caracteres)` : 'NO');
 
   try {
     if (!cdnLoaded.value) {
@@ -837,32 +831,5 @@ const descargarReporteBasico = async () => {
 </script>
 
 <style scoped>
-button:hover:not(:disabled) {
-  box-shadow: 0 10px 25px -5px rgba(20, 184, 166, 0.4);
-}
 
-button:active:not(:disabled) {
-  transform: scale(0.98);
-}
-
-.prose p {
-  margin-bottom: 0.5rem;
-}
-
-.prose li {
-  margin-bottom: 0.25rem;
-}
-
-@keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.animate-spin {
-  animation: spin 1s linear infinite;
-}
 </style>

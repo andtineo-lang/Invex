@@ -11,6 +11,7 @@ from .views import (
     RegisterAndActivateView,
     MarcarTutorialVistoView,
     CurrentEmpresaView,
+    EmpresaConfiguracionView, 
     
     # Vista de Importación
     InventarioImportAPIView,
@@ -59,6 +60,7 @@ urlpatterns = [
     # GESTIÓN DE EMPRESA
     # ========================================
     path('empresa/actual/', CurrentEmpresaView.as_view(), name='current-empresa'),
+    path('empresa/configuracion/', EmpresaConfiguracionView.as_view(), name='empresa-configuracion'),  #  NUEVA RUTA
 
     # ========================================
     # IMPORTACIÓN MASIVA

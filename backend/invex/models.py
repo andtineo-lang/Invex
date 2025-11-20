@@ -60,6 +60,18 @@ class Empresa(models.Model):
         on_delete=models.SET_NULL,
         related_name="empresas_propietarias"
     )
+    semanas_seguridad = models.PositiveIntegerField(
+        default=2,
+        help_text="Semanas de stock de seguridad antes de comprar"
+    )
+    semanas_objetivo = models.PositiveIntegerField(
+        default=4,
+        help_text="Semanas objetivo de stock al realizar una compra"
+    )
+    dias_analisis_demanda = models.PositiveIntegerField(
+        default=90,
+        help_text="Días históricos para calcular demanda promedio"
+    )
 
     def __str__(self):
         return self.nombre
@@ -207,7 +219,6 @@ class Movimiento(models.Model):
     tipo = models.CharField(max_length=10, choices=TIPOS)
     cantidad = models.IntegerField()
     unidad_medida = models.CharField(max_length=50, blank=True, null=True)
-    # 📝 Nota: Este campo se usará para registrar la fecha de la compra/movimiento.
     fecha_compra_producto = models.DateField(default=timezone.now) 
     proveedor = models.ForeignKey(Proveedor, on_delete=models.SET_NULL, null=True, blank=True)
     fecha_pedido = models.DateField(null=True, blank=True)
@@ -228,7 +239,6 @@ class DiaImportante(models.Model):
     empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name='dias_importantes')
     nombre_evento = models.CharField(max_length=255)
     fecha = models.DateField()
-    # 💥 AÑADIDO: Campo para la descripción del evento.
     descripcion = models.TextField(blank=True, null=True) 
 
     def __str__(self):

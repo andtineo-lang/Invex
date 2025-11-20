@@ -287,3 +287,48 @@ class ProyeccionCalculadaSerializer(serializers.Serializer):
     lead_time_semanas = serializers.FloatField()  # Tiempo de entrega (semanas)
     punto_reorden = serializers.IntegerField()  # Stock mínimo antes de comprar
     dias_para_comprar = serializers.IntegerField(allow_null=True)  # En cuántos días debes comprar (null = no aplica)
+
+
+
+class EmpresaConfiguracionSerializer(serializers.ModelSerializer):
+    """
+    Serializer para gestionar la configuración de inventario de la empresa.
+    """
+    class Meta:
+        model = Empresa
+        fields = [
+            'id',
+            'nombre',
+            'semanas_seguridad',
+            'semanas_objetivo', 
+            'dias_analisis_demanda'
+        ]
+        read_only_fields = ['id', 'nombre']
+    
+    def validate_semanas_seguridad(self, value):
+        """Validar que las semanas de seguridad sean razonables"""
+        if value < 1:
+            raise serializers.ValidationError("Las semanas de seguridad deben ser al menos 1.")
+        if value > 12:
+            raise serializers.ValidationError("Las semanas de seguridad no pueden exceder 12 semanas.")
+        return value
+    
+    def validate_semanas_objetivo(self, value):
+        """Validar que las semanas objetivo sean razonables"""
+        if value < 1:
+            raise serializers.ValidationError("Las semanas objetivo deben ser al menos 1.")
+        if value > 52:
+            raise serializers.ValidationError("Las semanas objetivo no pueden exceder 52 semanas.")
+        return value
+    
+    def validate(self, data):
+        """Validar que semanas_objetivo >= semanas_seguridad"""
+        semanas_seguridad = data.get('semanas_seguridad', self.instance.semanas_seguridad if self.instance else 2)
+        semanas_objetivo = data.get('semanas_objetivo', self.instance.semanas_objetivo if self.instance else 4)
+        
+        if semanas_objetivo < semanas_seguridad:
+            raise serializers.ValidationError({
+                'semanas_objetivo': 'Las semanas objetivo deben ser mayores o iguales a las semanas de seguridad.'
+            })
+        
+        return data

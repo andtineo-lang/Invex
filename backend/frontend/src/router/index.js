@@ -11,6 +11,7 @@ import Login from '../components/Login.vue'
 import Registro from '../components/Registro.vue'
 import ConfirmacionPago from '../components/ConfirmacionPago.vue'
 
+
 // --- 3. VISTAS DEL DASHBOARD ---
 import Inventario from '../components/inventario.vue'
 import ImportarInventario from '../components/ImportarInventario.vue'

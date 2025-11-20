@@ -29,7 +29,8 @@ from .serializers import (
     SuscripcionSerializer, DiaImportanteSerializer, FullRegistrationSerializer,
     UserManagementSerializer, 
     MasterImportSerializer,
-    ProyeccionCalculadaSerializer
+    ProyeccionCalculadaSerializer,
+    EmpresaConfiguracionSerializer 
 )
 
 Usuario = get_user_model()
@@ -136,6 +137,63 @@ class CurrentEmpresaView(APIView):
             )
         serializer = EmpresaSerializer(relacion.empresa)
         return Response(serializer.data)
+
+
+
+class EmpresaConfiguracionView(APIView):
+    """
+    Vista para obtener y actualizar la configuración de inventario de la empresa.
+    
+    GET: Obtiene la configuración actual
+    PATCH: Actualiza la configuración
+    """
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request):
+        """Obtener configuración actual de la empresa"""
+        relacion = UsuarioEmpresa.objects.filter(usuario=request.user).first()
+        if not relacion:
+            return Response(
+                {"error": "El usuario no está asociado a ninguna empresa."}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        serializer = EmpresaConfiguracionSerializer(relacion.empresa)
+        return Response(serializer.data)
+    
+    def patch(self, request):
+        """Actualizar configuración de la empresa"""
+        relacion = UsuarioEmpresa.objects.filter(usuario=request.user).first()
+        if not relacion:
+            return Response(
+                {"error": "El usuario no está asociado a ninguna empresa."}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        # Validar que el usuario tenga permisos de admin
+        if relacion.rol not in ['admin', 'manager']:
+            return Response(
+                {"error": "No tienes permisos para modificar la configuración."}, 
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        serializer = EmpresaConfiguracionSerializer(
+            relacion.empresa, 
+            data=request.data, 
+            partial=True
+        )
+        
+        if serializer.is_valid():
+            serializer.save()
+            return Response({
+                "mensaje": "Configuración actualizada exitosamente.",
+                "data": serializer.data
+            }, status=status.HTTP_200_OK)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+
 
 
 class MarcarTutorialVistoView(APIView):
@@ -430,16 +488,23 @@ def calcular_proyecciones_inventario(empresa, dias_analisis=None):
     CORRECCIÓN CLAVE: Maneja correctamente productos con demanda muy baja
     y evita coberturas absurdas (ej: 13025 semanas).
     
-    🆕 NUEVO: Calcula punto de reorden basado en lead time del proveedor.
+    🆕 ACTUALIZADO: Usa la configuración personalizada de la empresa.
     """
-    if dias_analisis is None:
-        dias_analisis = InventarioConfig.DIAS_ANALISIS_DEMANDA
+    
+    # 🆕 Obtener configuración de la empresa
+    config_semanas_seguridad = empresa.semanas_seguridad
+    config_semanas_objetivo = empresa.semanas_objetivo
+    config_dias_analisis = dias_analisis if dias_analisis is not None else empresa.dias_analisis_demanda
+    
+    # Umbral de demanda mínima (menos de 0.5 u/semana = sin demanda significativa)
+    UMBRAL_DEMANDA_MINIMA = 0.5
+    UMBRAL_SOBRESTOCK_SEMANAS = 12
     
     stocks = Stock.objects.filter(
         producto__empresa=empresa
     ).select_related('producto').order_by('producto__nombre')
     
-    fecha_limite = timezone.now().date() - timedelta(days=dias_analisis)
+    fecha_limite = timezone.now().date() - timedelta(days=config_dias_analisis)
     
     # Calcular ventas totales por producto en el periodo
     ventas_recientes = Movimiento.objects.filter(
@@ -453,7 +518,7 @@ def calcular_proyecciones_inventario(empresa, dias_analisis=None):
         for item in ventas_recientes
     }
     
-    # 🆕 Calcular lead time promedio por producto (del proveedor principal)
+    # Calcular lead time promedio por producto
     lead_times_query = Movimiento.objects.filter(
         producto__empresa=empresa,
         tipo='compra',
@@ -468,13 +533,12 @@ def calcular_proyecciones_inventario(empresa, dias_analisis=None):
     ).values('producto_id', 'proveedor_id').annotate(
         avg_lead_time=Avg('lead_time_days')
     )
-    
-    # Mapear lead time por producto (tomar el del proveedor principal)
+    # Crear un mapa de lead times por producto
     lead_time_map = {}
     for item in lead_times_query:
         producto_id = item['producto_id']
         if producto_id not in lead_time_map:
-            lead_time_days = item['avg_lead_time'].days if item['avg_lead_time'] else 14  # default 2 semanas
+            lead_time_days = item['avg_lead_time'].days if item['avg_lead_time'] else 14
             lead_time_map[producto_id] = lead_time_days
     
     proyecciones = []
@@ -482,42 +546,34 @@ def calcular_proyecciones_inventario(empresa, dias_analisis=None):
     for stock in stocks:
         total_vendido = demanda_map.get(stock.producto.id, 0)
         
-        # Calcular demanda semanal
-        demanda_semanal = (total_vendido / dias_analisis) * 7 if total_vendido > 0 else 0
+        # Calcular demanda semanal usando los días de análisis configurados
+        demanda_semanal = (total_vendido / config_dias_analisis) * 7 if total_vendido > 0 else 0
         demanda_semanal = round(demanda_semanal, 2)
         
-        # 🆕 Obtener lead time del producto (en días)
-        lead_time_dias = lead_time_map.get(stock.producto.id, 14)  # default 2 semanas
+        lead_time_dias = lead_time_map.get(stock.producto.id, 14)
         lead_time_semanas = round(lead_time_dias / 7, 1)
-        
-        # 🔥 CORRECCIÓN CLAVE: Manejo inteligente de cobertura
+        # Inicializar variables
         semanas_cobertura = None
         estado = "Stock OK"
         cantidad_sugerida = 0
         punto_reorden = 0
         dias_para_comprar = None
         
-        if demanda_semanal < InventarioConfig.UMBRAL_DEMANDA_MINIMA:
-            # Producto con demanda muy baja o nula
+        if demanda_semanal < UMBRAL_DEMANDA_MINIMA:
             semanas_cobertura = None
             estado = "Stock OK"
             
-        else:
-            # Producto con demanda significativa
+        else: # Calcular semanas de cobertura y estado
             semanas_cobertura = round(stock.stock_actual / demanda_semanal, 1)
             
-            # 🆕 CALCULAR PUNTO DE REORDEN
-            # Punto de Reorden = (Demanda × Lead Time) + Stock de Seguridad
+            # 🆕 CALCULAR PUNTO DE REORDEN con configuración personalizada
             stock_durante_lead_time = demanda_semanal * lead_time_semanas
-            stock_seguridad = demanda_semanal * InventarioConfig.SEMANAS_DE_SEGURIDAD
+            stock_seguridad = demanda_semanal * config_semanas_seguridad  # 🔥 USA CONFIG
             punto_reorden = int(stock_durante_lead_time + stock_seguridad)
-            
-            # 🆕 CALCULAR CUÁNDO COMPRAR
-            # Si el stock actual está cerca o por debajo del punto de reorden
+            # 
             if stock.stock_actual <= punto_reorden:
-                dias_para_comprar = 0  # Comprar AHORA
-            else:
-                # Calcular en cuántos días llegaremos al punto de reorden
+                dias_para_comprar = 0
+            else:# Calcular días para comprar
                 unidades_sobre_reorden = stock.stock_actual - punto_reorden
                 demanda_diaria = demanda_semanal / 7
                 if demanda_diaria > 0:
@@ -525,17 +581,16 @@ def calcular_proyecciones_inventario(empresa, dias_analisis=None):
                 else:
                     dias_para_comprar = None
             
-            # Determinar estado
-            if semanas_cobertura <= InventarioConfig.SEMANAS_DE_SEGURIDAD:
+            # 🆕 DETERMINAR ESTADO usando configuración personalizada
+            if semanas_cobertura <= config_semanas_seguridad:  # 🔥 USA CONFIG
                 estado = "Comprar Ahora"
-                # Calcular cantidad sugerida
-                stock_objetivo = demanda_semanal * InventarioConfig.SEMANAS_OBJETIVO_COMPRA
+                stock_objetivo = demanda_semanal * config_semanas_objetivo  # 🔥 USA CONFIG
                 cantidad_sugerida = max(0, int(stock_objetivo - stock.stock_actual))
                 
-            elif semanas_cobertura <= InventarioConfig.SEMANAS_DE_SEGURIDAD + 1:
+            elif semanas_cobertura <= config_semanas_seguridad + 1:  # 🔥 USA CONFIG
                 estado = "Revisar Pronto"
                 
-            elif semanas_cobertura > InventarioConfig.UMBRAL_SOBRESTOCK_SEMANAS:
+            elif semanas_cobertura > UMBRAL_SOBRESTOCK_SEMANAS:
                 estado = "Sobrestock"
             
             else:
@@ -549,8 +604,7 @@ def calcular_proyecciones_inventario(empresa, dias_analisis=None):
             'demanda_semanal_proyectada': demanda_semanal,
             'semanas_cobertura': semanas_cobertura,
             'estado': estado,
-            'cantidad_sugerida': cantidad_sugerida,
-            # 🆕 NUEVOS CAMPOS
+            'cantidad_sugerida': cantidad_sugerida, 
             'lead_time_dias': lead_time_dias,
             'lead_time_semanas': lead_time_semanas,
             'punto_reorden': punto_reorden,
@@ -558,8 +612,7 @@ def calcular_proyecciones_inventario(empresa, dias_analisis=None):
         })
     
     return proyecciones
-
-
+#
 # ===============================================
 # VISTAS DE ANALÍTICAS (CORREGIDAS)
 # ===============================================
