@@ -12,7 +12,6 @@
       </div>
     </div>
 
-    <!-- KPIs Cards -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
       <div class="bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-lg shadow-lg p-6 text-white">
         <h3 class="text-lg font-semibold mb-2">Tasa de Cumplimiento</h3>
@@ -42,7 +41,6 @@
       </div>
     </div>
 
-    <!-- Charts -->
     <div class="mb-8">
       <div class="flex items-center space-x-2 mb-4">
         <svg class="w-6 h-6 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -80,7 +78,6 @@
       </div>
     </div>
 
-    <!-- AI Report Content -->
     <div v-if="aiReportContent" class="mb-8 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg shadow-lg p-6 border-2 border-purple-200">
       <div class="flex items-center space-x-2 mb-4">
         <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -91,7 +88,6 @@
       <div class="prose prose-sm max-w-none text-gray-700" v-html="formatMarkdown(aiReportContent)"></div>
     </div>
 
-    <!-- Action Buttons -->
     <div class="flex justify-center gap-4 mb-8">
       <button 
         v-if="aiEnabled"
@@ -124,7 +120,6 @@
       </button>
     </div>
 
-    <!-- Products Table -->
     <div class="bg-white rounded-lg shadow-lg overflow-hidden">
       <div class="px-6 py-4 border-b border-gray-200">
         <h3 class="text-lg font-bold text-gray-900">Análisis Detallado por Producto</h3>
@@ -158,13 +153,13 @@
                 <div class="text-sm text-gray-500">SKU: {{ producto.producto_id }}</div>
               </td>
               <td class="px-6 py-4 text-sm text-gray-900">
-                {{ producto.demanda_semanal_proyectada.toFixed(1) }} u.
+                {{ Math.ceil(producto.demanda_semanal_proyectada) }} u.
               </td>
               <td class="px-6 py-4 text-sm text-gray-900">
                 {{ producto.stock_actual }} u.
               </td>
               <td class="px-6 py-4 text-sm text-gray-900">
-                {{ formatSemanasCobertura(producto.semanas_cobertura) }}
+                {{ calculateVisualCoverage(producto.stock_actual, producto.demanda_semanal_proyectada) }}
               </td>
               <td class="px-6 py-4 text-sm text-gray-900">
                 {{ producto.lead_time_dias }} días
@@ -186,7 +181,6 @@
       </div>
     </div>
 
-    <!-- Bottom KPIs -->
     <div class="mt-8 grid grid-cols-1 md:grid-cols-4 gap-4">
       <div class="bg-white rounded-lg shadow p-4">
         <div class="text-sm text-gray-500 mb-1">Total Ventas (unidades)</div>
@@ -441,11 +435,15 @@ const updateLeadTimeChart = (leadTimeData) => {
 // HELPER FUNCTIONS
 // ==========================================
 
-const formatSemanasCobertura = (semanas) => {
-  if (semanas === null || semanas === undefined) return 'Sin demanda';
-  if (!isFinite(semanas)) return 'N/A';
-  return semanas.toFixed(1);
+// 🔥 CÁLCULO VISUAL: COBERTURA BASADA EN DEMANDA REDONDEADA
+const calculateVisualCoverage = (stock, rawDemand) => {
+  const roundedDemand = Math.ceil(rawDemand || 0);
+  if (roundedDemand <= 0) return '∞'; 
+  const coverage = stock / roundedDemand;
+  return coverage.toFixed(1);
 };
+
+// ✅ ELIMINADA: formatSemanasCobertura (causaba el error de unused-vars)
 
 const formatDiasComprar = (dias) => {
   if (dias === null || dias === undefined) return 'N/A';
@@ -665,7 +663,7 @@ const generarBasePDF = (doc) => {
   
   const filas = proyecciones.value.map(item => [
     item.producto_nombre || 'N/A',
-    `${(item.demanda_semanal_proyectada || 0).toFixed(1)}`,
+    `${Math.ceil(item.demanda_semanal_proyectada || 0)}`, // 🔥 REDONDEO EN PDF TAMBIÉN
     `${item.stock_actual || 0}`,
     formatDiasComprar(item.dias_para_comprar),
     `${(item.cantidad_sugerida || 0).toLocaleString()}`,

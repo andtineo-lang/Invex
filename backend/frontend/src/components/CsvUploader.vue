@@ -93,6 +93,16 @@
             </select>
           </div>
 
+          <div class="field-map">
+            <label for="map-vencimiento">Fecha de Vencimiento (Opcional)</label>
+            <select id="map-vencimiento" v-model="columnMap.fecha_vencimiento">
+              <option value="">(Opcional)</option>
+              <option v-for="header in csvHeaders" :key="header" :value="header">
+                {{ header }}
+              </option>
+            </select>
+          </div>
+
           <h6 class="col-span-2 mt-4 font-bold text-lg text-indigo-700">
             Datos Opcionales (de Hoja Maestra)
           </h6>
@@ -239,7 +249,8 @@ const columnMap = ref({
   cantidad_vendida: '',
   proveedor: '',
   fecha_pedido: '',
-  fecha_recepcion: ''
+  fecha_recepcion: '',
+  fecha_vencimiento: '' // AGREGADO: Campo para mapear fecha de vencimiento
 });
 
 const aliasMap = {
@@ -252,6 +263,8 @@ const aliasMap = {
   proveedor: ['proveedor', 'suplidor', 'supplier', 'vendor', 'vendedor'],
   fecha_pedido: ['fecha_pedido', 'f_pedido', 'fecha_orden', 'order_date', 'fecha_compra'],
   fecha_recepcion: ['fecha_recepcion', 'f_recepcion', 'recibo', 'delivery_date', 'fecha recibida', 'fecha_recepcion'],
+  // AGREGADO: Alias para fecha de vencimiento
+  fecha_vencimiento: ['fecha_vencimiento', 'vencimiento', 'caducidad', 'f_venc', 'expiracion', 'vence']
 };
 
 // --- Funciones de Normalización y Detección ---
@@ -374,7 +387,7 @@ const findMasterSheetInfo = (workbook) => {
 // --- Función de Parseo de Fecha ---
 
 const parseDate = (value) => {
-  if (!value) return null;
+  if (!value || value === 'No aplica') return null; // AGREGADO: Manejar "No aplica"
   
   if (typeof value === 'number') {
     const date = XLSX.SSF.parse_date_code(value);
@@ -416,6 +429,11 @@ const guessColumnMappings = (headers) => {
   }
   if (!newMap.cantidad_comprada && headers.includes('cantidad_comprada')) {
     newMap.cantidad_comprada = 'cantidad_comprada';
+  }
+  
+  // AGREGADO: Detección de columna de vencimiento
+  if (!newMap.fecha_vencimiento && headers.includes('fecha_vencimiento')) {
+    newMap.fecha_vencimiento = 'fecha_vencimiento';
   }
   
   columnMap.value = newMap;
@@ -530,7 +548,9 @@ const processExcelFile = (file) => {
             const parsedPurchases = jsonData.map(row => ({
               ...row,
               fecha_pedido: parseDate(row.fecha_pedido),
-              fecha_recepcion: parseDate(row.fecha_recepcion)
+              fecha_recepcion: parseDate(row.fecha_recepcion),
+              // AGREGADO: Capturar fecha de vencimiento en historial de compras si existe
+              fecha_vencimiento: parseDate(row.fecha_vencimiento || row.vencimiento || row.caducidad) 
             }));
             purchaseHistoryData.value.push(...parsedPurchases);
           }
@@ -674,7 +694,8 @@ function resetFlow(clearFile = true) {
     cantidad_vendida: '',
     proveedor: '',
     fecha_pedido: '',
-    fecha_recepcion: ''
+    fecha_recepcion: '',
+    fecha_vencimiento: '' // RESETEADO
   };
 }
 </script>

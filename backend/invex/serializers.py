@@ -1,9 +1,11 @@
-# invex/serializers.py (VERSIÓN FINAL CORREGIDA)
+# invex/serializers.py (VERSIÓN ACTUALIZADA CON VENCIMIENTO)
 
 from rest_framework import serializers
 from django.db import transaction
 from django.utils import timezone
 from dateutil.relativedelta import relativedelta
+from django.db.models import Sum
+from datetime import timedelta  
 from .models import (
     Usuario, 
     Empresa, 
@@ -139,7 +141,9 @@ class ProductoImportSerializer(serializers.Serializer):
     proveedor = serializers.CharField(max_length=255, required=False, allow_null=True, allow_blank=True)
     fecha_pedido = serializers.DateField(required=False, allow_null=True)
     fecha_recepcion = serializers.DateField(required=False, allow_null=True)
-
+    
+    # --- NUEVO CAMPO ---
+    fecha_vencimiento = serializers.DateField(required=False, allow_null=True)
 
 class MasterImportSerializer(serializers.Serializer):
     productos = ProductoImportSerializer(many=True)
@@ -187,12 +191,16 @@ class StockWriteSerializer(serializers.ModelSerializer):
 class ProductoSerializer(serializers.ModelSerializer):
     stock = serializers.SerializerMethodField()
     inTransit = serializers.SerializerMethodField()
-    projectedSales = serializers.SerializerMethodField()
+    projectedSales = serializers.SerializerMethodField() # Mantenemos este por compatibilidad
     seasonal = serializers.SerializerMethodField()
     categoria_nombre = serializers.CharField(source='categoria.nombre', read_only=True)
     proyeccion_status = serializers.SerializerMethodField()
     proyeccion_cantidad = serializers.SerializerMethodField()
     stock_data = StockWriteSerializer(write_only=True)
+    fecha_vencimiento = serializers.SerializerMethodField()
+    
+    # 🔥 NUEVO: Este campo calcula la demanda REAL igual que el reporte
+    demanda_calculada = serializers.SerializerMethodField()
 
     class Meta:
         model = Producto
@@ -200,7 +208,9 @@ class ProductoSerializer(serializers.ModelSerializer):
             'id', 'nombre', 'sku', 'categoria',
             'stock', 'inTransit', 'projectedSales', 'seasonal', 'categoria_nombre',
             'stock_data',
-            'proyeccion_status', 'proyeccion_cantidad'
+            'proyeccion_status', 'proyeccion_cantidad',
+            'fecha_vencimiento',
+            'demanda_calculada' # <--- Agregado
         ]
 
     def get_first_stock(self, obj):
@@ -218,6 +228,23 @@ class ProductoSerializer(serializers.ModelSerializer):
         stock_obj = self.get_first_stock(obj)
         return stock_obj.ventas_proyectadas if stock_obj else 0
     
+    # 🔥 LÓGICA DE REPORTE: Calcula el promedio real de ventas
+    def get_demanda_calculada(self, obj):
+        # Usamos la configuración de la empresa (por defecto 90 días)
+        dias_analisis = obj.empresa.dias_analisis_demanda
+        fecha_limite = timezone.now().date() - timedelta(days=dias_analisis)
+        
+        total_vendido = obj.movimientos.filter(
+            tipo='venta',
+            fecha_compra_producto__gte=fecha_limite
+        ).aggregate(Sum('cantidad'))['cantidad__sum'] or 0
+        
+        if total_vendido > 0:
+            # Fórmula: (Total Vendido / Días) * 7 días = Promedio Semanal
+            promedio_semanal = (total_vendido / dias_analisis) * 7
+            return round(promedio_semanal, 1)
+        return 0
+
     def get_seasonal(self, obj):
         stock_obj = self.get_first_stock(obj)
         return stock_obj.demanda_estacional if stock_obj else "Normal"
@@ -229,6 +256,49 @@ class ProductoSerializer(serializers.ModelSerializer):
     def get_proyeccion_cantidad(self, obj):
         stock_obj = self.get_first_stock(obj)
         return stock_obj.proyeccion_cantidad_a_comprar if stock_obj else 0
+
+    def get_fecha_vencimiento(self, obj):
+        stock_obj = self.get_first_stock(obj)
+        if not stock_obj or stock_obj.stock_actual <= 0:
+            return None
+
+        proximo_vencimiento = obj.movimientos.filter(
+            tipo__in=['compra', 'ajuste'],
+            fecha_vencimiento__isnull=False,
+            fecha_vencimiento__gte=timezone.now().date()
+        ).order_by('fecha_vencimiento').first()
+        
+        if proximo_vencimiento:
+            return proximo_vencimiento.fecha_vencimiento
+        
+        ultimo = obj.movimientos.filter(
+            tipo__in=['compra', 'ajuste'],
+            fecha_vencimiento__isnull=False
+        ).order_by('-fecha_vencimiento').first()
+        
+        return ultimo.fecha_vencimiento if ultimo else None
+
+    def create(self, validated_data):
+        stock_data = validated_data.pop('stock_data')
+        request = self.context.get('request')
+        if not request or not hasattr(request, 'user'):
+            raise serializers.ValidationError("Contexto de request no encontrado.")
+        relacion = request.user.relaciones.first()
+        if not relacion:
+            raise serializers.ValidationError("El usuario no está asociado a ninguna empresa.")
+        producto = Producto.objects.create(empresa=relacion.empresa, **validated_data)
+        Stock.objects.create(producto=producto, **stock_data)
+        return producto
+
+    def update(self, instance, validated_data):
+        if 'stock_data' in validated_data:
+            stock_data = validated_data.pop('stock_data')
+            stock_instance = instance.stocks.first()
+            if stock_instance:
+                stock_serializer = StockWriteSerializer(stock_instance, data=stock_data, partial=True)
+                stock_serializer.is_valid(raise_exception=True)
+                stock_serializer.save()
+        return super().update(instance, validated_data)
 
     def create(self, validated_data):
         stock_data = validated_data.pop('stock_data')

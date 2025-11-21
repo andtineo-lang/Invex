@@ -223,6 +223,11 @@ class Movimiento(models.Model):
     proveedor = models.ForeignKey(Proveedor, on_delete=models.SET_NULL, null=True, blank=True)
     fecha_pedido = models.DateField(null=True, blank=True)
     fecha_recepcion = models.DateField(null=True, blank=True)
+    
+    # --- NUEVO CAMPO ---
+    fecha_vencimiento = models.DateField(null=True, blank=True, help_text="Fecha de caducidad del lote comprado")
+    # -------------------
+
     notas = models.TextField(blank=True, null=True)
 
     class Meta:
@@ -231,7 +236,6 @@ class Movimiento(models.Model):
 
     def __str__(self):
         return f"{self.tipo.capitalize()} de {self.cantidad}x {self.producto.nombre}"
-
 # ---------------------------
 # DÍAS IMPORTANTES
 # ---------------------------
