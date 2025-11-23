@@ -59,10 +59,12 @@ class RegistroSerializer(serializers.Serializer):
         empresa_nombre = validated_data['empresa_nombre']
         email = validated_data['email']
         password = validated_data['password']
+
         usuario, created_u = Usuario.objects.get_or_create(email=email)
         if created_u:
             usuario.set_password(password)
             usuario.save()
+
         empresa, created_e = Empresa.objects.get_or_create(nombre=empresa_nombre)
         if empresa.owner is None:
             empresa.owner = usuario
@@ -70,8 +72,27 @@ class RegistroSerializer(serializers.Serializer):
             rol = 'admin'
         else:
             rol = 'viewer'
-        UsuarioEmpresa.objects.get_or_create(usuario=usuario, empresa=empresa, defaults={'rol': rol})
+
+        UsuarioEmpresa.objects.get_or_create(
+            usuario=usuario,
+            empresa=empresa,
+            defaults={'rol': rol}
+        )
         return {"usuario": usuario, "empresa": empresa, "rol": rol}
+
+
+class ChangePasswordSerializer(serializers.Serializer):
+    old_password = serializers.CharField(write_only=True)
+    new_password = serializers.CharField(write_only=True, min_length=6)
+
+    def validate_old_password(self, value):
+        """
+        Verifica que la contraseña actual ingresada coincida con la del usuario autenticado.
+        """
+        user = self.context['request'].user
+        if not user.check_password(value):
+            raise serializers.ValidationError("La contraseña actual es incorrecta.")
+        return value
 
 
 class FullRegistrationSerializer(serializers.Serializer):
@@ -152,9 +173,17 @@ class MasterImportSerializer(serializers.Serializer):
 # ---------------------------
 
 class UsuarioSerializer(serializers.ModelSerializer):
+    rol = serializers.SerializerMethodField()
+
     class Meta:
         model = Usuario
-        fields = ['id', 'email', 'nombre', 'mostrar_tutorial'] 
+        fields = ['id', 'email', 'nombre', 'mostrar_tutorial', 'rol']
+
+    def get_rol(self, obj):
+        relacion = obj.relaciones.first()
+        if relacion:
+            return relacion.rol
+        return None
 
 
 class EmpresaSerializer(serializers.ModelSerializer):
@@ -263,7 +292,6 @@ class DiaImportanteSerializer(serializers.ModelSerializer):
     class Meta:
         model = DiaImportante
         fields = ['id', 'nombre_evento', 'fecha', 'descripcion']
-
 
 # ====================================================================
 # 🆕 SERIALIZER PARA PROYECCIONES CALCULADAS (CORREGIDO)

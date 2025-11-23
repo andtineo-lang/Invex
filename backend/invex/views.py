@@ -9,6 +9,7 @@ from django.db import transaction
 from django.contrib.auth import get_user_model
 from django.utils.crypto import get_random_string
 from django.core.mail import send_mail
+from django.conf import settings
 from django.utils import timezone
 from django.db.models import Sum, Avg, F, ExpressionWrapper, DurationField, Count, Case, When, Value, CharField, FloatField, Q
 from django.db.models.functions import TruncMonth
@@ -18,6 +19,7 @@ from rest_framework import viewsets, generics, status, serializers
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
+from .permissions import RolePermission
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from .models import (
@@ -29,7 +31,8 @@ from .serializers import (
     SuscripcionSerializer, DiaImportanteSerializer, FullRegistrationSerializer,
     UserManagementSerializer, 
     MasterImportSerializer,
-    ProyeccionCalculadaSerializer
+    ProyeccionCalculadaSerializer,
+     ChangePasswordSerializer,
 )
 
 Usuario = get_user_model()
@@ -115,6 +118,28 @@ class RegistroView(generics.CreateAPIView):
             "empresa_id": empresa_id
         })
 
+class ChangePasswordView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        serializer = ChangePasswordSerializer(
+            data=request.data,
+            context={'request': request}
+        )
+        serializer.is_valid(raise_exception=True)
+
+        user = request.user
+        new_password = serializer.validated_data['new_password']
+
+        # Cambiar la contraseña usando la API estándar de Django
+        user.set_password(new_password)
+        user.save()
+
+        return Response(
+            {"detail": "Contraseña actualizada correctamente."},
+            status=status.HTTP_200_OK
+        )
+
 
 class CurrentUserView(APIView):
     permission_classes = [IsAuthenticated]
@@ -169,8 +194,14 @@ class RegisterAndActivateView(APIView):
 
 class UserManagementViewSet(viewsets.ModelViewSet):
     serializer_class = UserManagementSerializer
-    permission_classes = [IsAuthenticated]
-    
+    permission_classes = [IsAuthenticated, RolePermission]
+
+    role_perms = {
+        'read':   ['admin'],  # ver usuarios de la empresa
+        'write':  ['admin'],  # cambiar roles / agregar usuarios
+        'delete': ['admin'],
+    }
+
     def get_queryset(self):
         relacion_admin = self.request.user.relaciones.first()
         if not relacion_admin:
@@ -180,7 +211,79 @@ class UserManagementViewSet(viewsets.ModelViewSet):
         ).select_related('usuario')
     
     def perform_create(self, serializer):
-        pass
+        """
+        Crea (o reutiliza) un Usuario y lo asocia a la empresa del admin,
+        enviando un correo de invitación con una contraseña temporal si el
+        usuario es nuevo.
+        """
+        relacion_admin = self.request.user.relaciones.first()
+        if not relacion_admin:
+            raise serializers.ValidationError(
+                {"detail": "El usuario autenticado no está asociado a ninguna empresa."}
+            )
+
+        empresa = relacion_admin.empresa
+
+        # Datos que vienen del formulario del frontend
+        email = self.request.data.get('email')
+        nombre_completo = self.request.data.get('nombre_completo')
+        # El rol viene validado dentro del serializer
+        rol = self.request.data.get('rol', 'viewer')
+
+        if not email:
+            raise serializers.ValidationError(
+                {"email": "Este campo es obligatorio."}
+            )
+
+        UserModel = get_user_model()
+
+        # Crear o reutilizar usuario por email
+        user, created = UserModel.objects.get_or_create(
+            email=email,
+            defaults={"nombre": nombre_completo or email}
+        )
+
+        temp_password = None
+
+        if created:
+            # Generar contraseña temporal para el nuevo usuario
+            temp_password = get_random_string(10)
+            user.set_password(temp_password)
+            user.save()
+        else:
+            # Si ya existía, actualizamos el nombre si viene distinto
+            if nombre_completo and getattr(user, "nombre", None) != nombre_completo:
+                user.nombre = nombre_completo
+                user.save()
+
+        # Crear / actualizar la relación UsuarioEmpresa usando el serializer
+        instancia = serializer.save(usuario=user, empresa=empresa)
+
+        # Enviar correo de invitación solo si el usuario es nuevo
+        if temp_password:
+            try:
+                send_mail(
+                    subject="Invitación a INVEX",
+                    message=(
+                        f"Hola {nombre_completo or email},\n\n"
+                        f"Has sido invitado a la empresa \"{empresa.nombre}\" en INVEX.\n\n"
+                        f"Tu usuario es: {email}\n"
+                        f"Tu contraseña temporal es: {temp_password}\n\n"
+                        "Por seguridad, inicia sesión y cambia la contraseña en la opción "
+                        "\"Cambiar contraseña\" dentro de la aplicación.\n\n"
+                        "Saludos,\nEquipo INVEX"
+                    ),
+                    from_email=getattr(settings, "DEFAULT_FROM_EMAIL", None),
+                    recipient_list=[email],
+                    fail_silently=True,
+                )
+            except Exception as e:
+                logging.getLogger(__name__).error(
+                    f"Error enviando correo de invitación a {email}: {e}"
+                )
+
+        return instancia
+
 
 
 # ===============================================
@@ -188,7 +291,14 @@ class UserManagementViewSet(viewsets.ModelViewSet):
 # ===============================================
 
 class InventarioImportAPIView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, RolePermission]
+
+    # Solo admin y manager pueden usar la importación masiva
+    role_perms = {
+        'read':   [],                       # no se usa GET
+        'write':  ['admin', 'manager'],     # POST
+        'delete': [],                       # no aplica
+    }
 
     def _find_key_value(self, item_dict, possible_keys):
         normalized_dict = {
@@ -382,7 +492,15 @@ class EmpresaViewSet(EmpresaScopeMixin, viewsets.ModelViewSet):
     serializer_class = EmpresaSerializer
     queryset = Empresa.objects.all()
     empresa_lookup_field = 'id__in'
-    
+    permission_classes = [IsAuthenticated, RolePermission]
+
+    # reglas de rol
+    role_perms = {
+        'read':   ['admin', 'manager'],  # quién puede listar/ver empresas
+        'write':  ['admin'],             # crear / actualizar
+        'delete': ['admin'],             # eliminar
+    }
+
     def perform_create(self, serializer):
         empresa = serializer.save(owner=self.request.user)
         UsuarioEmpresa.objects.create(
@@ -394,8 +512,16 @@ class EmpresaViewSet(EmpresaScopeMixin, viewsets.ModelViewSet):
 
 class ProductoViewSet(EmpresaScopeMixin, viewsets.ModelViewSet):
     serializer_class = ProductoSerializer
-    queryset = Producto.objects.all().prefetch_related('stocks') 
+    queryset = Producto.objects.all().prefetch_related('stocks')
     empresa_lookup_field = 'empresa_id__in'
+    permission_classes = [IsAuthenticated, RolePermission]
+
+    # reglas de rol
+    role_perms = {
+        'read':   ['admin', 'manager', 'worker', 'viewer'],
+        'write':  ['admin', 'manager', 'worker'],  # crear/editar
+        'delete': ['admin', 'manager'],            # borrar
+    }
 
     def get_serializer_context(self):
         return {'request': self.request}
@@ -405,18 +531,33 @@ class SuscripcionViewSet(EmpresaScopeMixin, viewsets.ModelViewSet):
     serializer_class = SuscripcionSerializer
     queryset = Suscripcion.objects.all()
     empresa_lookup_field = 'empresa_id__in'
+    permission_classes = [IsAuthenticated, RolePermission]
+
+    role_perms = {
+        'read':   ['admin', 'manager'],  # ver suscripción
+        'write':  ['admin'],             # modificar (por si acaso)
+        'delete': ['admin'],
+    }
 
 
 class DiaImportanteViewSet(EmpresaScopeMixin, viewsets.ModelViewSet):
     serializer_class = DiaImportanteSerializer
     queryset = DiaImportante.objects.all()
     empresa_lookup_field = 'empresa_id__in'
-    
+    permission_classes = [IsAuthenticated, RolePermission]
+
+    role_perms = {
+        'read':   ['admin', 'manager', 'worker', 'viewer'],
+        'write':  ['admin', 'manager'],
+        'delete': ['admin', 'manager'],
+    }
+
     def perform_create(self, serializer):
         relacion = self.request.user.relaciones.first()
         if not relacion:
             raise serializers.ValidationError("No tienes una empresa asignada.")
         serializer.save(empresa=relacion.empresa)
+
 
 
 # ===============================================
@@ -565,7 +706,13 @@ def calcular_proyecciones_inventario(empresa, dias_analisis=None):
 # ===============================================
 
 class VentasHistoricasView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, RolePermission]
+
+    role_perms = {
+        'read':   ['admin', 'manager', 'worker', 'viewer'],
+        'write':  [],
+        'delete': [],
+    }
     
     def get(self, request, *args, **kwargs):
         relacion = request.user.relaciones.first()
@@ -593,7 +740,13 @@ class VentasHistoricasView(APIView):
 
 
 class VentasMensualesView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, RolePermission]
+
+    role_perms = {
+        'read':   ['admin', 'manager', 'worker', 'viewer'],
+        'write':  [],
+        'delete': [],
+    }
     
     def get(self, request, *args, **kwargs):
         relacion = request.user.relaciones.first()
@@ -622,8 +775,15 @@ class VentasMensualesView(APIView):
         return Response(formatted_data)
 
 
+
 class TopProductosVendidosView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, RolePermission]
+
+    role_perms = {
+        'read':   ['admin', 'manager', 'viewer'],
+        'write':  [],
+        'delete': [],
+    }
     
     def get(self, request, *args, **kwargs):
         relacion = request.user.relaciones.first()
@@ -643,11 +803,18 @@ class TopProductosVendidosView(APIView):
         return Response(list(top_productos))
 
 
+
 class ProductoProyeccionesView(APIView):
     """
     🆕 VERSIÓN CORREGIDA: Usa la función helper centralizada
     """
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, RolePermission]
+
+    role_perms = {
+        'read':   ['admin', 'manager', 'worker', 'viewer'],
+        'write':  [],
+        'delete': [],
+    }
     
     def get(self, request, *args, **kwargs):
         relacion = request.user.relaciones.first()
@@ -662,8 +829,15 @@ class ProductoProyeccionesView(APIView):
         return Response(serializer.data)
 
 
+
 class EstadoInventarioView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, RolePermission]
+
+    role_perms = {
+        'read':   ['admin', 'manager', 'worker', 'viewer'],
+        'write':  [],
+        'delete': [],
+    }
     
     def get(self, request, *args, **kwargs):
         relacion = request.user.relaciones.first()
@@ -694,7 +868,13 @@ class EstadoInventarioView(APIView):
 
 
 class ComprasPorProveedorView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, RolePermission]
+
+    role_perms = {
+        'read':   ['admin', 'manager', 'viewer'],
+        'write':  [],
+        'delete': [],
+    }
     
     def get(self, request, *args, **kwargs):
         relacion = request.user.relaciones.first()
@@ -713,6 +893,7 @@ class ComprasPorProveedorView(APIView):
         ).order_by('-total_comprado')
         
         return Response(list(compras))
+
 
 
 class LeadTimePorProveedorView(APIView):
@@ -754,7 +935,13 @@ class KpisGeneralesView(APIView):
     """
     🆕 VERSIÓN CORREGIDA: Calcula la tasa de cumplimiento REAL
     """
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, RolePermission]
+
+    role_perms = {
+        'read':   ['admin', 'manager', 'viewer'],
+        'write':  [],
+        'delete': [],
+    }
 
     def get(self, request, *args, **kwargs):
         relacion = request.user.relaciones.first()
@@ -793,7 +980,14 @@ class DashboardConsolidadoView(APIView):
     Endpoint optimizado que devuelve todos los datos del dashboard en una sola llamada.
     🆕 VERSIÓN CORREGIDA con cálculos precisos de cobertura y tasa de cumplimiento real.
     """
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, RolePermission]
+
+    # Todos los roles pueden ver el dashboard (solo lectura)
+    role_perms = {
+        'read':   ['admin', 'manager', 'worker', 'viewer'],
+        'write':  [],  # no se usa
+        'delete': [],  # no se usa
+    }
     
     def get(self, request, *args, **kwargs):
         relacion = request.user.relaciones.first()
