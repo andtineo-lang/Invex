@@ -359,19 +359,29 @@ class ProyeccionCalculadaSerializer(serializers.Serializer):
     dias_para_comprar = serializers.IntegerField(allow_null=True)  # En cuántos días debes comprar (null = no aplica)
 
 
-
 class EmpresaConfiguracionSerializer(serializers.ModelSerializer):
     """
     Serializer para gestionar la configuración de inventario de la empresa.
+    Actualizado con parámetros de logística y umbrales.
     """
     class Meta:
         model = Empresa
         fields = [
             'id',
             'nombre',
+            # Campos Básicos
             'semanas_seguridad',
             'semanas_objetivo', 
-            'dias_analisis_demanda'
+            'dias_analisis_demanda',
+            
+            # 🔥 NUEVOS CAMPOS DE LOGÍSTICA (Lead Time & Vencimiento)
+            'max_lead_time_razonable',
+            'lead_time_defecto',
+            'buffer_venta_semanas',
+            
+            # 🔥 NUEVOS CAMPOS DE ALERTAS (Semáforos)
+            'umbral_demanda_minima',
+            'umbral_sobrestock_semanas'
         ]
         read_only_fields = ['id', 'nombre']
     
@@ -391,8 +401,15 @@ class EmpresaConfiguracionSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Las semanas objetivo no pueden exceder 52 semanas.")
         return value
     
+    def validate_umbral_sobrestock_semanas(self, value):
+        """Validar umbral de sobrestock"""
+        if value < 4:
+            raise serializers.ValidationError("El umbral de sobrestock debe ser de al menos 4 semanas.")
+        return value
+
     def validate(self, data):
-        """Validar que semanas_objetivo >= semanas_seguridad"""
+        """Validar coherencia entre parámetros"""
+        # Obtenemos valores del request o de la instancia actual si no vienen en el request
         semanas_seguridad = data.get('semanas_seguridad', self.instance.semanas_seguridad if self.instance else 2)
         semanas_objetivo = data.get('semanas_objetivo', self.instance.semanas_objetivo if self.instance else 4)
         

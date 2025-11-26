@@ -491,26 +491,28 @@ class DiaImportanteViewSet(EmpresaScopeMixin, viewsets.ModelViewSet):
 def calcular_proyecciones_inventario(empresa, dias_analisis=None):
     """
     Función centralizada para calcular proyecciones de inventario.
-    🔥 AHORA CON TECHO DINÁMICO POR VENCIMIENTO
+    🔥 AHORA CON TECHO DINÁMICO POR VENCIMIENTO Y CONFIGURACIÓN DE BASE DE DATOS
     """
     
-    # 1. Configuración Global
+    # 1. Configuración Global (AHORA DINÁMICA DESDE LA BD)
     config_semanas_seguridad = empresa.semanas_seguridad
     config_semanas_objetivo = empresa.semanas_objetivo
     config_dias_analisis = dias_analisis if dias_analisis is not None else empresa.dias_analisis_demanda
     
-    UMBRAL_DEMANDA_MINIMA = 0.5 
-    UMBRAL_SOBRESTOCK_SEMANAS = 12
-    MAX_LEAD_TIME_RAZONABLE = 60
-    LEAD_TIME_DEFECTO = 7
-    BUFFER_VENTA_SEMANAS = 2 # 🔥 Semanas que queremos de margen antes de que venza el producto
+    # 🔥 USAMOS LOS VALORES DE LA BD (Si son nulos, usamos defaults seguros)
+    MAX_LEAD_TIME_RAZONABLE = empresa.max_lead_time_razonable or 60
+    LEAD_TIME_DEFECTO = empresa.lead_time_defecto or 7
+    BUFFER_VENTA_SEMANAS = empresa.buffer_venta_semanas or 2
+    
+    UMBRAL_DEMANDA_MINIMA = empresa.umbral_demanda_minima if empresa.umbral_demanda_minima is not None else 0.5
+    UMBRAL_SOBRESTOCK_SEMANAS = empresa.umbral_sobrestock_semanas or 12
+    
+    fecha_limite = timezone.now().date() - timedelta(days=config_dias_analisis)
+    hoy = timezone.now().date()
 
     stocks = Stock.objects.filter(
         producto__empresa=empresa
     ).select_related('producto').order_by('producto__nombre')
-    
-    fecha_limite = timezone.now().date() - timedelta(days=config_dias_analisis)
-    hoy = timezone.now().date()
     
     # 2. Demanda (Ventas)
     ventas_recientes = Movimiento.objects.filter(
@@ -521,7 +523,7 @@ def calcular_proyecciones_inventario(empresa, dias_analisis=None):
     
     demanda_map = {item['producto_id']: item['total_vendido'] for item in ventas_recientes}
     
-    # 3. Lead Time (Sanitizado)
+    # 3. Lead Time (Sanitizado con MAX_LEAD_TIME_RAZONABLE)
     compras_historicas = Movimiento.objects.filter(
         producto__empresa=empresa,
         tipo='compra',
@@ -535,6 +537,7 @@ def calcular_proyecciones_inventario(empresa, dias_analisis=None):
     for compra in compras_historicas:
         pid = compra['producto_id']
         dias = (compra['fecha_recepcion'] - compra['fecha_pedido']).days
+        # Filtro de calidad de datos
         if 0 <= dias <= MAX_LEAD_TIME_RAZONABLE:
             if pid not in tiempos_por_producto: tiempos_por_producto[pid] = []
             tiempos_por_producto[pid].append(dias)
@@ -545,13 +548,14 @@ def calcular_proyecciones_inventario(empresa, dias_analisis=None):
 
     # 🔥 4. Mapa de Vencimientos Próximos (FEFO)
     # Obtenemos la fecha de vencimiento futura más cercana para cada producto
+    # Requiere: from django.db.models import Min
     vencimientos_query = Movimiento.objects.filter(
         producto__empresa=empresa,
         tipo__in=['compra', 'ajuste'],
         fecha_vencimiento__isnull=False,
         fecha_vencimiento__gte=hoy
     ).values('producto_id').annotate(
-        proximo_vencimiento=Min('fecha_vencimiento') # Tomamos la fecha más cercana
+        proximo_vencimiento=Min('fecha_vencimiento') 
     )
     vencimientos_map = {v['producto_id']: v['proximo_vencimiento'] for v in vencimientos_query}
 
@@ -559,70 +563,80 @@ def calcular_proyecciones_inventario(empresa, dias_analisis=None):
     
     for stock in stocks:
         total_vendido = demanda_map.get(stock.producto.id, 0)
-        demanda_semanal = (total_vendido / config_dias_analisis) * 7 if total_vendido > 0 else 0
+        
+        # Calcular Demanda Semanal
+        if total_vendido > 0:
+            demanda_semanal = (total_vendido / config_dias_analisis) * 7
+        else:
+            demanda_semanal = 0
         demanda_semanal = round(demanda_semanal, 2)
         
+        # Lead Time
         lead_time_dias = lead_time_map.get(stock.producto.id, LEAD_TIME_DEFECTO)
         lead_time_semanas = round(lead_time_dias / 7, 1)
         
+        # Inicializar
         semanas_cobertura = None
         estado = "Stock OK"
         cantidad_sugerida = 0
         punto_reorden = 0
         dias_para_comprar = None
         
+        # Lógica de Umbrales
         if demanda_semanal < UMBRAL_DEMANDA_MINIMA:
             semanas_cobertura = None
+            # Si vende muy poco, solo es Sobrestock si tiene mucho acumulado
             estado = "Stock OK" if stock.stock_actual < 10 else "Sobrestock"
             
         else:
+            # Calcular cobertura
             semanas_cobertura = round(stock.stock_actual / demanda_semanal, 1)
             
-            # --- 🔥 LÓGICA DEL TECHO DINÁMICO ---
+            # --- 🔥 LÓGICA DEL TECHO DINÁMICO (VENCIMIENTO) ---
             
-            # 1. Objetivo Global (lo que quiere la empresa)
+            # 1. Objetivo Global Base
             semanas_objetivo_final = config_semanas_objetivo
             
-            # 2. Verificar si hay fecha de vencimiento que nos limite
+            # 2. Ajuste por Vencimiento
             fecha_venc = vencimientos_map.get(stock.producto.id)
             
             if fecha_venc:
                 dias_vida_util = (fecha_venc - hoy).days
                 semanas_vida_util = dias_vida_util / 7
                 
-                # El techo es la vida útil MENOS un buffer de seguridad (ej: 2 semanas para vender lo último)
+                # Techo seguro = Vida útil - Buffer de seguridad (configurable)
                 techo_seguro = max(0, semanas_vida_util - BUFFER_VENTA_SEMANAS)
                 
-                # Si el techo seguro es MENOR que el objetivo global, usamos el techo.
-                # Ej: Config=12 sem, Vence=6 sem -> Usamos 4 sem (6-2).
+                # Si el techo es menor que el objetivo global, bajamos el objetivo
                 if techo_seguro < semanas_objetivo_final:
                     semanas_objetivo_final = techo_seguro
 
             # ------------------------------------
 
+            # Calcular Punto de Reorden
             stock_durante_lead_time = demanda_semanal * lead_time_semanas
             stock_seguridad = demanda_semanal * config_semanas_seguridad
             punto_reorden = int(stock_durante_lead_time + stock_seguridad)
             
+            # Evaluación de Estado
             if stock.stock_actual <= punto_reorden:
                 estado = "Comprar Ahora"
                 dias_para_comprar = 0
                 
-                # Calcular compra usando el OBJETIVO AJUSTADO (semanas_objetivo_final)
+                # Calcular compra usando el OBJETIVO AJUSTADO (dinámico)
                 stock_maximo_deseado = (demanda_semanal * semanas_objetivo_final) + punto_reorden
                 cantidad_necesaria = stock_maximo_deseado - stock.stock_actual
                 
-                # Si el producto está casi vencido (techo muy bajo), cantidad necesaria podría ser negativa.
-                # Esto evita que compremos cosas que van a vencer ya.
                 cantidad_sugerida = max(0, int(cantidad_necesaria))
                 
             else:
                 exceso_sobre_reorden = stock.stock_actual - punto_reorden
                 demanda_diaria = demanda_semanal / 7
+                
                 if demanda_diaria > 0:
                     dias_para_comprar = int(exceso_sobre_reorden / demanda_diaria)
                 
-                if dias_para_comprar <= 7:
+                if dias_para_comprar is not None and dias_para_comprar <= 7:
                     estado = "Revisar Pronto"
                 elif semanas_cobertura > UMBRAL_SOBRESTOCK_SEMANAS:
                     estado = "Sobrestock"

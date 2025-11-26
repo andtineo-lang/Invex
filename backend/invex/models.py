@@ -48,6 +48,9 @@ class Usuario(AbstractBaseUser, PermissionsMixin):
 # ---------------------------
 # EMPRESA
 # ---------------------------
+# ---------------------------
+# EMPRESA
+# ---------------------------
 class Empresa(models.Model):
     nombre = models.CharField(max_length=255, unique=True)
     rut = models.CharField(max_length=20, blank=True, null=True, unique=True)
@@ -73,9 +76,30 @@ class Empresa(models.Model):
         help_text="Días históricos para calcular demanda promedio"
     )
 
+    # --- NUEVOS CAMPOS PARA LOGÍSTICA AVANZADA Y VENCIMIENTOS ---
+    max_lead_time_razonable = models.PositiveIntegerField(
+        default=60,
+        help_text="Días máximos para considerar una compra válida en el historial (filtro de errores)"
+    )
+    lead_time_defecto = models.PositiveIntegerField(
+        default=7,
+        help_text="Días que tarda un proveedor si no hay historial previo (para productos nuevos)"
+    )
+    buffer_venta_semanas = models.PositiveIntegerField(
+        default=2,
+        help_text="Semanas antes del vencimiento para dejar de sugerir compra (margen de seguridad)"
+    )
+    umbral_demanda_minima = models.FloatField(
+        default=0.5,
+        help_text="Ventas semanales mínimas para considerar que un producto tiene demanda activa"
+    )
+    umbral_sobrestock_semanas = models.PositiveIntegerField(
+        default=12,
+        help_text="Semanas de cobertura máximas antes de marcar el producto como Sobrestock"
+    )
+
     def __str__(self):
         return self.nombre
-
 # ---------------------------
 # PROVEEDOR
 # ---------------------------
