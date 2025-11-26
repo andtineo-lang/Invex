@@ -24,3 +24,8 @@ git add .
 # ===============================================
 .vscode/
 .DS_Store
+
+
+# ===============================================
+backend/frontend/.env
+backend/config/__pycache__/settings.cpython-313.pyc

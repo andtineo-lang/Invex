@@ -13,6 +13,7 @@ import ConfirmacionPago from '../components/ConfirmacionPago.vue'
 import RecuperarPassword from '../components/RecuperarPassword.vue'
 import ResetPasswordConfirm from '../components/ResetPasswordConfirm.vue' // 👈 1. AÑADIDO
 
+
 // --- 3. VISTAS DEL DASHBOARD ---
 import Inventario from '../components/inventario.vue'
 import ImportarInventario from '../components/ImportarInventario.vue'
