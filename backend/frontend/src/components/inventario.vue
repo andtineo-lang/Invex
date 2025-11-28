@@ -24,6 +24,9 @@
               <h3 class="font-semibold text-gray-900 leading-tight">{{ product.name }}</h3>
               <p class="text-xs text-gray-500">SKU: {{ product.sku }}</p>
             </div>
+            <span :class="getSeasonalClass(product.seasonal)" class="px-2 py-0.5 text-[10px] font-medium rounded-full whitespace-nowrap">
+              {{ product.seasonal }}
+            </span>
           </div>
           <dl class="mt-3 grid grid-cols-2 gap-3 text-sm">
             <div>
@@ -35,22 +38,14 @@
               </dd>
             </div>
             <div>
-              <dt class="text-gray-500">Vencimiento</dt>
-              <dd class="font-medium" :class="getExpiryClass(product.expiration)">
-                {{ formatExpiry(product.expiration) }}
-              </dd>
-            </div>
-            <div>
               <dt class="text-gray-500">En tránsito</dt>
               <dd class="font-medium text-gray-900">{{ product.inTransit }}</dd>
             </div>
             <div>
-              <dt class="text-gray-500">Demanda Prom.</dt>
-              <dd class="font-medium text-gray-900">
-                ~{{ Math.ceil(product.realDemand) }} u/sem
-              </dd>
+              <dt class="text-gray-500">Ventas proj.</dt>
+              <dd class="font-medium text-gray-900">{{ product.projectedSales }}/sem</dd>
             </div>
-            <div class="col-span-2">
+            <div>
               <dt class="text-gray-500">Proyección</dt>
               <dd class="font-semibold" :class="getProyeccionClass(product.proyeccion_status)">
                 <span v-if="product.proyeccion_status === 'Comprar Ahora'">
@@ -76,10 +71,10 @@
               <tr>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Producto</th>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stock Actual</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vencimiento</th>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">En Tránsito</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Demanda Semanal</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ventas Proyectadas</th>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Proyección de Compra</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Demanda Estacional</th>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
               </tr>
             </thead>
@@ -96,22 +91,20 @@
                     {{ product.stock }} unidades
                   </span>
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium" :class="getExpiryClass(product.expiration)">
-                  {{ formatExpiry(product.expiration) }}
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ product.inTransit }} u.</td>
-                
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">
-                  ~{{ Math.ceil(product.realDemand) }} u/sem
-                </td>
-                
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ product.inTransit }} unidades</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ product.projectedSales }} unidades/semana</td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold" :class="getProyeccionClass(product.proyeccion_status)">
                   <div v-if="product.proyeccion_status === 'Comprar Ahora'">
-                    Comprar {{ product.proyeccion_cantidad }} u.
+                    Comprar {{ product.proyeccion_cantidad }} unidades
                   </div>
                   <div v-else>
                     {{ product.proyeccion_status }}
                   </div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <span :class="getSeasonalClass(product.seasonal)" class="px-2 py-1 text-xs font-medium rounded-full">
+                    {{ product.seasonal }}
+                  </span>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
                   <button class="text-blue-600 hover:text-blue-900" @click="openEdit(product)">Editar</button>
@@ -143,7 +136,7 @@
                 <input v-model.number="newProduct.stock" type="number" min="0" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500">
               </div>
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Demanda Semanal (Estimada)</label>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Ventas Proy./sem</label>
                 <input v-model.number="newProduct.projectedSales" type="number" min="0" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500">
               </div>
             </div>
@@ -179,7 +172,7 @@
                 <input v-model.number="editingProduct.stock" type="number" min="0" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500">
               </div>
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Demanda Semanal</label>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Ventas Proy./sem</label>
                 <input v-model.number="editingProduct.projectedSales" type="number" min="0" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500">
               </div>
             </div>
@@ -224,12 +217,10 @@ async function fetchProducts() {
       sku: p.sku,
       stock: p.stock,
       inTransit: p.inTransit,
-      // Mapeamos la demanda calculada, si es 0, usamos la manual
-      realDemand: p.demanda_calculada > 0 ? p.demanda_calculada : p.projectedSales, 
-      projectedSales: p.projectedSales, 
+      projectedSales: p.projectedSales,
+      seasonal: p.seasonal,
       proyeccion_status: p.proyeccion_status,
-      proyeccion_cantidad: p.proyeccion_cantidad,
-      expiration: p.fecha_vencimiento
+      proyeccion_cantidad: p.proyeccion_cantidad
     }));
   } catch (error) {
     console.error("Error al obtener productos:", error)
@@ -308,28 +299,20 @@ const filteredProducts = computed(() => {
   return products.value.filter(p => p.name.toLowerCase().includes(q) || (p.sku && p.sku.toLowerCase().includes(q)))
 })
 
-// --- HELPERS DE FORMATO Y ESTILOS ---
-
-const formatExpiry = (dateString) => {
-  if (!dateString) return 'No aplica';
-  const date = new Date(dateString);
-  if (isNaN(date)) return 'No aplica';
-  return date.toLocaleDateString('es-ES', { year: 'numeric', month: 'short', day: 'numeric' });
-}
-
-const getExpiryClass = (dateString) => {
-  if (!dateString) return 'text-gray-500';
-  const today = new Date();
-  const expiry = new Date(dateString);
-  if (expiry < today) return 'text-red-600 font-bold'; 
-  if (expiry < new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000)) return 'text-orange-600 font-semibold';
-  return 'text-gray-900';
-}
-
 const getStockClass = (stock) => {
   if (stock < 100) return 'bg-red-100 text-red-800'
   if (stock < 300) return 'bg-yellow-100 text-yellow-800'
   return 'bg-green-100 text-green-800'
+}
+
+const getSeasonalClass = (seasonal) => {
+  const classes = {
+    'San Valentín Alta': 'bg-pink-100 text-pink-800',
+    'Pico Halloween': 'bg-orange-100 text-orange-800',
+    'Temporada Navideña': 'bg-green-100 text-green-800',
+    'Pico Black Friday': 'bg-purple-100 text-purple-800'
+  }
+  return classes[seasonal] || 'bg-gray-100 text-gray-800'
 }
 
 const getProyeccionClass = (status) => {

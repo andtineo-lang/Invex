@@ -48,9 +48,6 @@ class Usuario(AbstractBaseUser, PermissionsMixin):
 # ---------------------------
 # EMPRESA
 # ---------------------------
-# ---------------------------
-# EMPRESA
-# ---------------------------
 class Empresa(models.Model):
     nombre = models.CharField(max_length=255, unique=True)
     rut = models.CharField(max_length=20, blank=True, null=True, unique=True)
@@ -63,43 +60,10 @@ class Empresa(models.Model):
         on_delete=models.SET_NULL,
         related_name="empresas_propietarias"
     )
-    semanas_seguridad = models.PositiveIntegerField(
-        default=2,
-        help_text="Semanas de stock de seguridad antes de comprar"
-    )
-    semanas_objetivo = models.PositiveIntegerField(
-        default=4,
-        help_text="Semanas objetivo de stock al realizar una compra"
-    )
-    dias_analisis_demanda = models.PositiveIntegerField(
-        default=90,
-        help_text="Días históricos para calcular demanda promedio"
-    )
-
-    # --- NUEVOS CAMPOS PARA LOGÍSTICA AVANZADA Y VENCIMIENTOS ---
-    max_lead_time_razonable = models.PositiveIntegerField(
-        default=60,
-        help_text="Días máximos para considerar una compra válida en el historial (filtro de errores)"
-    )
-    lead_time_defecto = models.PositiveIntegerField(
-        default=7,
-        help_text="Días que tarda un proveedor si no hay historial previo (para productos nuevos)"
-    )
-    buffer_venta_semanas = models.PositiveIntegerField(
-        default=2,
-        help_text="Semanas antes del vencimiento para dejar de sugerir compra (margen de seguridad)"
-    )
-    umbral_demanda_minima = models.FloatField(
-        default=0.5,
-        help_text="Ventas semanales mínimas para considerar que un producto tiene demanda activa"
-    )
-    umbral_sobrestock_semanas = models.PositiveIntegerField(
-        default=12,
-        help_text="Semanas de cobertura máximas antes de marcar el producto como Sobrestock"
-    )
 
     def __str__(self):
         return self.nombre
+
 # ---------------------------
 # PROVEEDOR
 # ---------------------------
@@ -243,15 +207,11 @@ class Movimiento(models.Model):
     tipo = models.CharField(max_length=10, choices=TIPOS)
     cantidad = models.IntegerField()
     unidad_medida = models.CharField(max_length=50, blank=True, null=True)
+    # 📝 Nota: Este campo se usará para registrar la fecha de la compra/movimiento.
     fecha_compra_producto = models.DateField(default=timezone.now) 
     proveedor = models.ForeignKey(Proveedor, on_delete=models.SET_NULL, null=True, blank=True)
     fecha_pedido = models.DateField(null=True, blank=True)
     fecha_recepcion = models.DateField(null=True, blank=True)
-    
-    # --- NUEVO CAMPO ---
-    fecha_vencimiento = models.DateField(null=True, blank=True, help_text="Fecha de caducidad del lote comprado")
-    # -------------------
-
     notas = models.TextField(blank=True, null=True)
 
     class Meta:
@@ -260,6 +220,7 @@ class Movimiento(models.Model):
 
     def __str__(self):
         return f"{self.tipo.capitalize()} de {self.cantidad}x {self.producto.nombre}"
+
 # ---------------------------
 # DÍAS IMPORTANTES
 # ---------------------------
@@ -267,6 +228,7 @@ class DiaImportante(models.Model):
     empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name='dias_importantes')
     nombre_evento = models.CharField(max_length=255)
     fecha = models.DateField()
+    # 💥 AÑADIDO: Campo para la descripción del evento.
     descripcion = models.TextField(blank=True, null=True) 
 
     def __str__(self):

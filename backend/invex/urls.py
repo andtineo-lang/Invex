@@ -1,11 +1,9 @@
-# invex/urls.py (ACTUALIZADO CON ENDPOINT CONSOLIDADO)
-
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from django.views.decorators.csrf import csrf_exempt
 from .views import (
-    # Vistas de Autenticación y Perfil
-    RegistroView,
+    # Se importan todas las vistas necesarias
+    # RegistroView, # Comentada porque no existe en views.py
     CustomLoginView,
     RegisterAndActivateView,
     PasswordResetRequestView,
@@ -13,30 +11,20 @@ from .views import (
     CurrentUserView,
     MarcarTutorialVistoView,
     CurrentEmpresaView,
-    EmpresaConfiguracionView, 
-    
-    # Vista de Importación
     InventarioImportAPIView,
-    
-    # ViewSets
     EmpresaViewSet,
     ProductoViewSet,
     SuscripcionViewSet,
     DiaImportanteViewSet,
     UserManagementViewSet,
-    
-    # Vistas de Analíticas (Legacy - Mantener para compatibilidad)
-    VentasHistoricasView,
+    ChangePasswordView,
+    # VentasHistoricasView, # Comentada porque no existe en views.py
     VentasMensualesView,
     TopProductosVendidosView,
     EstadoInventarioView,
-    ComprasPorProveedorView,
-    LeadTimePorProveedorView,
-    ProductoProyeccionesView,
-    KpisGeneralesView,
-    
-    # 🆕 Nueva Vista Consolidada (RECOMENDADA)
-    DashboardConsolidadoView,
+    # ComprasPorProveedorView, # Comentada porque no existe en views.py
+    # LeadTimePorProveedorView, # Comentada porque no existe en views.py
+    ProductoProyeccionesView
 )
 
 # Router para ViewSets (operaciones CRUD)
@@ -49,10 +37,8 @@ router.register(r'usuarios', UserManagementViewSet, basename='usuario-gestion')
 
 # Definición de URLs de la API
 urlpatterns = [
-    # ========================================
-    # AUTENTICACIÓN Y PERFIL
-    # ========================================
-    path('auth/registro/', csrf_exempt(RegistroView.as_view()), name='registro'),
+    # --- Rutas de Autenticación y Perfil ---
+    # path('auth/registro/', csrf_exempt(RegistroView.as_view()), name='registro'), # Ruta comentada
     path('auth/login/', csrf_exempt(CustomLoginView.as_view()), name='custom-login'),
     path('auth/register-and-activate/', csrf_exempt(RegisterAndActivateView.as_view()), name='register-and-activate'),
     
@@ -64,48 +50,23 @@ urlpatterns = [
     path('users/change-password/', ChangePasswordView.as_view(), name='change-password'),
     path('users/marcar-tutorial-visto/', MarcarTutorialVistoView.as_view(), name='marcar-tutorial-visto'),
 
-    # ========================================
-    # GESTIÓN DE EMPRESA
-    # ========================================
+    # --- Rutas de Gestión de Usuarios y Empresa ---
     path('empresa/actual/', CurrentEmpresaView.as_view(), name='current-empresa'),
-    path('empresa/configuracion/', EmpresaConfiguracionView.as_view(), name='empresa-configuracion'),  #  NUEVA RUTA
 
-    # ========================================
-    # IMPORTACIÓN MASIVA
-    # ========================================
+    # --- Rutas de Acciones Específicas ---
     path('empresas/<int:empresa_id>/importar-inventario/', csrf_exempt(InventarioImportAPIView.as_view()), name='importar-inventario'),
 
-    # ========================================
-    # ENDPOINT CONSOLIDADO (RECOMENDADO)
-    # ========================================
-    # Este endpoint devuelve todos los datos del dashboard en UNA SOLA llamada
-    # Incluye: proyecciones, ventas mensuales, lead times, estado inventario y KPIs
-    # ✅ Úsalo en lugar de los endpoints individuales para mejor rendimiento
-    path('analytics/dashboard-consolidado/', DashboardConsolidadoView.as_view(), name='dashboard-consolidado'),
-
-    # ========================================
-    # ANALÍTICAS INDIVIDUALES (LEGACY)
-    # ========================================
-    # Estos endpoints se mantienen para compatibilidad con código existente
-    # pero se recomienda usar el endpoint consolidado arriba
-    path('analytics/ventas-historicas/', VentasHistoricasView.as_view(), name='ventas-historicas'),
+    # --- RUTAS DE ANALÍTICAS Y PROYECCIONES ---
+    # path('analytics/ventas-historicas/', VentasHistoricasView.as_view(), name='ventas-historicas'), # Ruta comentada
     path('analytics/ventas-mensuales/', VentasMensualesView.as_view(), name='ventas-mensuales'),
     path('analytics/top-productos/', TopProductosVendidosView.as_view(), name='top-productos'),
     path('analytics/estado-inventario/', EstadoInventarioView.as_view(), name='estado-inventario'),
-    path('analytics/compras-proveedor/', ComprasPorProveedorView.as_view(), name='compras-proveedor'),
-    path('analytics/lead-time-proveedor/', LeadTimePorProveedorView.as_view(), name='lead-time-proveedor'),
-    path('analytics/kpis-generales/', KpisGeneralesView.as_view(), name='kpis-generales'),
-
-    # ========================================
-    # PROYECCIONES DE PRODUCTOS
-    # ========================================
+    # path('analytics/compras-proveedor/', ComprasPorProveedorView.as_view(), name='compras-proveedor'), # Ruta comentada
+    # path('analytics/lead-time-proveedor/', LeadTimePorProveedorView.as_view(), name='lead-time-proveedor'), # Ruta comentada
+    
+    # 👇 --- RUTA CLAVE PARA LA TABLA DE PROYECCIONES ---
     path('productos/proyecciones/', ProductoProyeccionesView.as_view(), name='producto-proyecciones'),
 
-    # ========================================
-    # CRUD (Router)
-    # ========================================
+    # --- Rutas CRUD gestionadas por el router ---
     path('', include(router.urls)),
 ]
-
-
-
