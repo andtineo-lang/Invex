@@ -8,15 +8,13 @@
       <div class="footer-section">
         <h4>Producto</h4>
         <ul>
-          <li><router-link to="/caracteristicas">Características</router-link></li>
-          <li><router-link to="/precios">Precios</router-link></li>
+          <!-- CORREGIDO: Ahora apunta a /planes (público) en vez de /precios -->
+          <li><router-link to="/planes">Planes</router-link></li>
         </ul>
       </div>
       <div class="footer-section">
         <h4>Soporte</h4>
         <ul>
-          <li><router-link to="/documentacion">Documentación</router-link></li>
-          <li><router-link to="/contacto">Contacto</router-link></li>
           <li><router-link to="/faq">FAQ</router-link></li>
         </ul>
       </div>

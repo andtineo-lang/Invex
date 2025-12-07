@@ -289,9 +289,20 @@ const proyecciones = ref([]);
 // COMPUTED PROPERTIES
 // ==========================================
 
-const accionUrgente = computed(() =>
-  proyecciones.value.find(p => p.estado === 'Comprar Ahora')
-);
+const accionUrgente = computed(() => {
+  const productosUrgentes = proyecciones.value.filter(p => p.estado === 'Comprar Ahora');
+  
+  if (productosUrgentes.length === 0) return null;
+  
+  // Priorizar por: mayor demanda semanal + menor stock = más urgente
+  // Score = demanda_semanal / stock_actual (mientras mayor, más urgente)
+  return productosUrgentes.sort((a, b) => {
+    const scoreA = (a.demanda_semanal_proyectada || 0) / Math.max(a.stock_actual, 1);
+    const scoreB = (b.demanda_semanal_proyectada || 0) / Math.max(b.stock_actual, 1);
+    
+    return scoreB - scoreA;
+  })[0];
+});
 
 const riesgoAgotamiento = computed(() =>
   proyecciones.value.find(p => p.estado === 'Revisar Pronto')

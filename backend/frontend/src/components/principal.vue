@@ -12,7 +12,7 @@
           </h1>
           <p class="hero-subtitle" ref="subtitleRef">
             Optimiza tu inventario con tecnología de inteligencia artificial.
-            Predice demanda, reduce costos y maximiza eficiencia.
+            recomienda cuando hacer tu compra y cuando impulsar tus productos, reduce costos y maximiza eficiencia.
           </p>
           <div class="hero-buttons" ref="buttonsRef">
             <router-link to="/registro">
@@ -24,9 +24,9 @@
           </div>
           <div class="features-grid" ref="featuresRef">
             <div class="feature-card">
-              <div class="feature-icon">📊</div>
-              <h3>Análisis Predictivo</h3>
-              <p>IA que predice demanda futura</p>
+              <div class="feature-icon">💡</div>
+              <h3>Recomendación inteligente</h3>
+              <p>IA que recomienda cuando hacer las compras de tus productos criticos y cuando impulsar tus productos inactivos</p>
             </div>
             <div class="feature-card">
               <div class="feature-icon">⚡</div>
@@ -99,72 +99,65 @@
     </section>
 
     <!-- Pricing Section -->
-    <section id="pricing" class="pricing" ref="pricingRef">
-      <div class="container">
+  <section id="pricing" class="pricing" ref="pricingRef">
+    <div class="container">
         <div class="section-header">
-          <h2>Planes de Suscripción</h2>
-          <p>Elige el plan que mejor se adapte a tu negocio</p>
+            <h2>Planes de Suscripción</h2>
+            <p>Elige el plan que mejor se adapte a tu negocio</p>
         </div>
-        <div class="pricing-grid">
-          <div class="pricing-card">
-            <div class="plan-header">
-              <h3>Plan Trimestral</h3>
-              <div class="price">
-                <span class="currency">$</span>
-                <span class="amount">299</span>
-                <span class="period">/3 meses</span>
-              </div>
-            </div>
-            <ul class="features-list">
-              <li>Hasta 1,000 productos</li>
-              <li>Análisis básico de IA</li>
-              <li>Reportes mensuales</li>
-              <li>Soporte por email</li>
-            </ul>
-            <button class="btn-outline btn-full">Comenzar</button>
-          </div>
 
-          <div class="pricing-card featured">
-            <div class="popular-badge">Más Popular</div>
-            <div class="plan-header">
-              <h3>Plan Semestral</h3>
-              <div class="price">
-                <span class="currency">$</span>
-                <span class="amount">499</span>
-                <span class="period">/6 meses</span>
-              </div>
-            </div>
-            <ul class="features-list">
-              <li>Hasta 5,000 productos</li>
-              <li>IA avanzada predictiva</li>
-              <li>Reportes semanales</li>
-              <li>Soporte prioritario</li>
-              <li>Integraciones API</li>
-            </ul>
-            <button class="btn-primary btn-full">Comenzar</button>
-          </div>
+        <div class="pricing-grid" style="grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); max-width: 900px; margin: 0 auto;">
 
-          <div class="pricing-card">
-            <div class="plan-header">
-              <h3>Plan Anual</h3>
-              <div class="price">
-                <span class="currency">$</span>
-                <span class="amount">899</span>
-                <span class="period">/año</span>
-              </div>
+            <div class="pricing-card">
+                <div class="plan-header">
+                    <h3>Plan Inicial</h3>
+                    <div class="price">
+                        <span class="currency">$</span>
+                        <span class="amount">0</span>
+                        <span class="period">/mes</span>
+                    </div>
+                </div>
+                <ul class="features-list">
+                    <li>✓ Máximo 50 productos</li>
+                    <li>✓ Reportes básicos</li>
+                    <li style="color: #9ca3af; opacity: 0.8;">
+                        <span style="color: #ef4444; font-weight: bold; margin-right: 5px;">✕</span>
+                        Sin Recomendaciones de IA
+                    </li>
+                    <li style="color: #9ca3af; opacity: 0.8;">
+                        <span style="color: #ef4444; font-weight: bold; margin-right: 5px;">✕</span>
+                        Sin predicción de demanda
+                    </li>
+                </ul>
+                <router-link :to="{ name: 'Registro' }" class="btn-outline btn-full">
+                    Comenzar Gratis
+                </router-link>
             </div>
-            <ul class="features-list">
-              <li>Productos ilimitados</li>
-              <li>IA empresarial completa</li>
-              <li>Reportes en tiempo real</li>
-              <li>Soporte 24/7</li>
-              <li>Consultoría personalizada</li>
-            </ul>
-            <button class="btn-outline btn-full">Comenzar</button>
-          </div>
-        </div>
-      </div>
-    </section>
+
+            <div class="pricing-card featured">
+                <div class="popular-badge">Recomendado</div>
+                <div class="plan-header">
+                    <h3>Plan INVEX PRO</h3>
+                    <div class="price">
+                        <span class="currency">$</span>
+                        <span class="amount">30.000</span>
+                        <span class="period">/mes</span>
+                    </div>
+                </div>
+                <ul class="features-list">
+                    <li>✓ Productos Ilimitados</li>
+                    <li>✓ IA Estratégica Completa</li>
+                    <li>✓ Predicción de demanda</li>
+                    <li>✓ Prioridad en soporte</li>
+                </ul>
+                <router-link :to="{ name: 'Registro' }" class="btn-primary btn-full">
+                    Obtener Plan PRO
+                </router-link>
+            </div>
+
+        </div> 
+    </div> </section>
+ 
   </div>
 </template>
 

@@ -29,16 +29,21 @@
 <script setup>
 import { ref, onMounted, reactive } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { useAuthStore } from '../stores/auth'; 
 
 const route = useRoute();
 const router = useRouter();
+const authStore = useAuthStore(); 
 
 const isLoading = ref(true);
 const statusMessage = ref('Confirmando tu pago, por favor espera...');
 const paymentResult = reactive({});
 
+// Definición de las funciones de navegación
+const goToDashboard = () => router.push('/dashboard/inventario');
+const goToRegister = () => router.push('/registro');
+
 onMounted(async () => {
-  // El token que Transbank añade a la URL de retorno
   const token_ws = route.query.token_ws;
 
   if (!token_ws) {
@@ -49,7 +54,7 @@ onMounted(async () => {
   }
 
   try {
-    // ✅ PASO 1: Confirmar el estado de la transacción con el backend de Transbank
+    // 1. Confirmar pago con Transbank
     const confirmResponse = await fetch('http://127.0.0.1:5000/api/confirm-transaction', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -65,34 +70,48 @@ onMounted(async () => {
     
     statusMessage.value = 'Pago confirmado. Creando tu cuenta...';
     
-    // ✅ PASO 2: Recuperar los datos de registro guardados en la sesión
+    // 2. Recuperar datos temporales
     const pendingData = JSON.parse(sessionStorage.getItem('pendingRegistrationData'));
     if (!pendingData) {
       throw new Error('No se encontraron datos de registro para finalizar la creación de la cuenta.');
     }
 
-    // ✅ PASO 3: Enviar los datos al backend de Django para crear y activar la cuenta
+    // 3. Transformar datos para el Backend (Corrección PlanId -> Plan)
+    const registrationPayload = {
+        email: pendingData.email,
+        password: pendingData.password,
+        name: pendingData.name,       
+        company: pendingData.company, 
+        rut: pendingData.rut,
+        industry: pendingData.industry,
+        // Mapeo crucial: si es 'pro' lo convertimos al string que Django espera
+        plan: pendingData.planId === 'pro' ? 'Plan Semestral' : 'Plan Trimestral' 
+    };
+
+    // 4. Crear cuenta en Django
     const registerResponse = await fetch('http://127.0.0.1:8000/api/auth/register-and-activate/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-            registration: pendingData, // Todos los datos del formulario
-            payment: paymentData       // Información del pago exitoso
+            registration: registrationPayload, 
+            payment: paymentData
         })
     });
 
     if (!registerResponse.ok) {
         const errorData = await registerResponse.json();
-        throw new Error(errorData.detail || 'Hubo un problema al crear tu cuenta después del pago.');
+        const errorMsg = JSON.stringify(errorData).replace(/["{}[\]]/g, ' ').trim();
+        throw new Error(errorMsg || 'Hubo un problema al crear tu cuenta después del pago.');
     }
 
     const userData = await registerResponse.json();
 
-    // ✅ PASO 4: Guardar el token y el ROL del usuario, y luego limpiar
-    localStorage.setItem('authToken', userData.token); // El token JWT real del backend
-    localStorage.setItem('userRole', userData.rol);   // El rol del nuevo usuario ('admin')
+    // 5. Iniciar sesión automáticamente en el Frontend
+    if (userData.token) {
+        authStore.loginSuccess(userData.token, userData.rol, userData.empresa_id);
+    }
 
-    sessionStorage.removeItem('pendingRegistrationData'); // Limpiar datos temporales
+    sessionStorage.removeItem('pendingRegistrationData');
 
   } catch (error) {
     console.error('Error en la confirmación:', error);
@@ -102,13 +121,9 @@ onMounted(async () => {
     isLoading.value = false;
   }
 });
-
-const goToDashboard = () => router.push('/dashboard/inventario');
-const goToRegister = () => router.push('/registro');
 </script>
 
 <style scoped>
-
 .confirmation-container { display: flex; justify-content: center; align-items: center; min-height: 100vh; background-color: #f9fafb; padding: 2rem; }
 .status-card { background: white; padding: 2.5rem 3rem; border-radius: 1rem; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1); text-align: center; max-width: 500px; width: 100%; }
 .icon { font-size: 3.5rem; margin-bottom: 1rem; }
@@ -120,4 +135,3 @@ const goToRegister = () => router.push('/registro');
 .spinner { width: 56px; height: 56px; border: 6px solid #e5e7eb; border-top-color: #0f766e; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 2rem; }
 @keyframes spin { to { transform: rotate(360deg); } }
 </style>
-

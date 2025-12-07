@@ -6,13 +6,39 @@
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
         </svg>
         <h2 class="text-3xl font-bold text-gray-900">Reportes y Análisis de Inventario</h2>
-        <span v-if="aiEnabled" class="ml-3 px-3 py-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white text-xs font-bold rounded-full">
+        
+        <span v-if="aiEnabled && !isFreeUser" class="ml-3 px-3 py-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white text-xs font-bold rounded-full">
           🤖 inxex AI PRO
         </span>
       </div>
     </div>
 
-    <!-- KPIs Cards -->
+    <div v-if="isFreeUser && proyecciones.length >= 50" class="mb-8 bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-r-lg shadow-sm">
+      <div class="flex">
+        <div class="flex-shrink-0">
+          <svg class="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+          </svg>
+        </div>
+        <div class="ml-3">
+          <h3 class="text-sm leading-5 font-medium text-yellow-800">
+            Límite de análisis alcanzado
+          </h3>
+          <div class="mt-2 text-sm leading-5 text-yellow-700">
+            <p>
+              Estás visualizando el máximo de <b>50 productos</b> permitidos en el Plan Inicial. 
+              Para analizar todo tu inventario y desbloquear la IA Estratégica, necesitas el Plan Pro.
+            </p>
+            <p class="mt-2">
+              <button @click="goToPlans" class="font-bold underline hover:text-yellow-900 transition-colors">
+                Actualizar a Plan Pro &rarr;
+              </button>
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
       <div class="bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-lg shadow-lg p-6 text-white">
         <h3 class="text-lg font-semibold mb-2">Tasa de Cumplimiento</h3>
@@ -42,7 +68,6 @@
       </div>
     </div>
 
-    <!-- Charts -->
     <div class="mb-8">
       <div class="flex items-center space-x-2 mb-4">
         <svg class="w-6 h-6 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -80,7 +105,6 @@
       </div>
     </div>
 
-    <!-- AI Report Content -->
     <div v-if="aiReportContent" class="mb-8 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg shadow-lg p-6 border-2 border-purple-200">
       <div class="flex items-center space-x-2 mb-4">
         <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -91,10 +115,10 @@
       <div class="prose prose-sm max-w-none text-gray-700" v-html="formatMarkdown(aiReportContent)"></div>
     </div>
 
-    <!-- Action Buttons -->
     <div class="flex justify-center gap-4 mb-8">
+      
       <button 
-        v-if="aiEnabled"
+        v-if="!isFreeUser && aiEnabled"
         @click="descargarReporteConIA" 
         :disabled="downloading || globalState.isLoading || isGeneratingAI" 
         class="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white px-8 py-3 rounded-lg font-semibold shadow-lg transition-all transform hover:scale-105 flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -112,6 +136,14 @@
       </button>
 
       <button 
+        v-else-if="isFreeUser"
+        @click="goToPlans"
+        class="bg-gray-200 text-gray-500 border border-gray-300 px-8 py-3 rounded-lg font-semibold shadow-sm flex items-center space-x-2 cursor-pointer hover:bg-gray-300 transition-colors"
+      >
+        <span>🔒 Reporte IA (Solo Plan Pro)</span>
+      </button>
+
+      <button 
         @click="descargarReporteBasico" 
         :disabled="downloading || globalState.isLoading" 
         class="bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 text-white px-8 py-3 rounded-lg font-semibold shadow-lg transition-all transform hover:scale-105 flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -119,12 +151,11 @@
         <svg v-if="!downloading" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
         </svg>
-        <span v-if="!downloading">Descargar Reporte {{ aiEnabled ? 'Básico' : '' }} (PDF)</span>
+        <span v-if="!downloading">Descargar Reporte {{ !isFreeUser ? 'Básico' : '' }} (PDF)</span>
         <span v-else>Generando PDF...</span>
       </button>
     </div>
 
-    <!-- Products Table -->
     <div class="bg-white rounded-lg shadow-lg overflow-hidden">
       <div class="px-6 py-4 border-b border-gray-200">
         <h3 class="text-lg font-bold text-gray-900">Análisis Detallado por Producto</h3>
@@ -186,7 +217,6 @@
       </div>
     </div>
 
-    <!-- Bottom KPIs -->
     <div class="mt-8 grid grid-cols-1 md:grid-cols-4 gap-4">
       <div class="bg-white rounded-lg shadow p-4">
         <div class="text-sm text-gray-500 mb-1">Total Ventas (unidades)</div>
@@ -229,8 +259,13 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue';
+import { useRouter } from 'vue-router'; // Para redirección
+import { useAuthStore } from '../stores/auth'; // Para obtener estado del plan
 import axiosInstance from '@/api/axios.js';
 import VueApexCharts from 'vue3-apexcharts';
+
+const router = useRouter();
+const authStore = useAuthStore();
 
 // ==========================================
 // TOON IMPORT (Asíncrono)
@@ -302,6 +337,17 @@ const kpisData = reactive({
   unidades_totales_stock: 0, 
   productos_criticos: 0
 });
+const diasImportantes = ref([]);
+
+// COMPUTADA: VERIFICAR SI ES USUARIO FREE
+const isFreeUser = computed(() => {
+  return authStore.user?.subscription_status === 'free';
+});
+
+// ACCIÓN: IR A PLANES
+const goToPlans = () => {
+  router.push('/precios'); // Asegúrate que esta ruta exista en tu router
+};
 
 // ==========================================
 // CHART OPTIONS
@@ -369,6 +415,7 @@ const loadDashboardData = async () => {
     
     updateVentasChart(data.ventas_mensuales || []);
     updateLeadTimeChart(data.lead_times || []);
+    diasImportantes.value = data.dias_importantes || [];
     
     globalState.isLoading = false;
   } catch (err) {
@@ -401,9 +448,10 @@ const updateLeadTimeChart = (data) => {
 
 const calculateVisualCoverage = (stock, rawDemand) => {
   const roundedDemand = Math.ceil(rawDemand || 0);
-  if (roundedDemand <= 0) return '∞'; 
+  if (roundedDemand <= 0) return 'Sin demanda'; 
   const coverage = stock / roundedDemand;
-  return coverage.toFixed(1);
+  // Redondear: >= 0.5 hacia arriba, < 0.5 hacia abajo
+  return Math.round(coverage);
 };
 
 const formatDiasComprar = (dias) => {
@@ -425,7 +473,8 @@ const getEstadoClass = (estado) => {
     'Comprar Ahora': 'bg-red-100 text-red-800', 
     'Revisar Pronto': 'bg-yellow-100 text-yellow-800', 
     'Stock OK': 'bg-green-100 text-green-800', 
-    'Sobrestock': 'bg-purple-100 text-purple-800' 
+    'Sobrestock': 'bg-purple-100 text-purple-800',
+    'Inactivo': 'bg-gray-100 text-gray-500'
   };
   return classes[estado] || 'bg-gray-100 text-gray-800';
 };
@@ -475,7 +524,7 @@ const prepararDatosParaIA = () => {
       estado: p.estado
     }))
     .sort((a, b) => (a.dias_para_comprar || 0) - (b.dias_para_comprar || 0))
-    .slice(0, 10); // Solo top 10
+    .slice(0, 10);
 
   // ==========================================
   // 📦 PRODUCTOS CON SOBRESTOCK (Top 10)
@@ -489,7 +538,7 @@ const prepararDatosParaIA = () => {
       cobertura_semanas: p.semanas_cobertura !== null ? parseFloat(p.semanas_cobertura.toFixed(1)) : null
     }))
     .sort((a, b) => b.cobertura_semanas - a.cobertura_semanas)
-    .slice(0, 10); // Top 10 con más sobrestock
+    .slice(0, 10);
 
   // ==========================================
   // 📊 TENDENCIA DE VENTAS
@@ -512,14 +561,27 @@ const prepararDatosParaIA = () => {
   };
 
   // ==========================================
-  // 🎯 RETORNAR SOLO LO ESENCIAL
+  // 📅 DÍAS IMPORTANTES PRÓXIMOS
+  // ==========================================
+  const fechaActual = new Date().toISOString().split('T')[0];
+  const eventosProximos = diasImportantes.value.map(d => ({
+    evento: d.nombre,
+    fecha: d.fecha,
+    dias_restantes: d.dias_restantes,
+    descripcion: d.descripcion
+  }));
+
+  // ==========================================
+  // 🎯 RETORNAR TODO (ÚNICO RETURN AL FINAL)
   // ==========================================
   return {
+    fecha_actual: fechaActual,
     kpis_generales: kpis,
     productos_criticos: productosCriticos,
     productos_sobrestock: productosConSobrestock,
     tendencia_ventas: tendenciaVentas,
-    resumen_estados: resumenPorEstado
+    resumen_estados: resumenPorEstado,
+    eventos_proximos: eventosProximos
   };
 };
 
@@ -590,45 +652,30 @@ Analiza estos datos de inventario y crea un reporte ejecutivo accionable para el
 ${datosFormateados}
 
 **TU MISIÓN:**
-Crear un reporte en español, directo y profesional que el dueño pueda leer en 3 minutos y actuar inmediatamente.
+Actua como un experto en ventas, acabas de terminar una reunión con tus líderes de equipo, Tomaste notas de el documento anterior sobre lo que le interesa a tu público, los productos que son tendencia
+y los puntos críticos del inventario. Quieres Proponer recomendaciones claras y concisas para optimizar el inventario, mejorar la eficiencia y maximizar las ventas.
+genera un reporte ejecutivo que incluya todo lo anterior mente mencionado.
 
-**ESTRUCTURA OBLIGATORIA:**
+${datosOptimizados.eventos_proximos?.length > 0 ? `
+**EVENTOS ESPECIALES PRÓXIMOS:**
+${datosOptimizados.eventos_proximos.map(e => `- ${e.evento} (${e.fecha}, en ${e.dias_restantes} días)${e.descripcion ? ': ' + e.descripcion : ''}`).join('\n')}
 
-## 1. 🎯 Estado General del Inventario (3-4 líneas)
-- Salud operativa: ¿estamos bien, en riesgo o críticos?
-- Tendencia de movimiento: ¿vendemos más o menos que antes?
-- Eficiencia general del stock
-
-## 2. 🚨 ALERTAS URGENTES (Acción Inmediata)
-Para cada producto crítico:
-- **[Nombre Producto]**: 
-  - Stock: X unidades | Demanda semanal: Y unidades
-  - ⏰ Tiempo hasta agotarse: Z días
-  - 📦 Cantidad sugerida: X unidades
-
-*Si NO hay críticos, di: "✅ No hay productos en riesgo inmediato."*
-
-## 3. 📦 Optimización de Bodega (Sobrestock)
-Productos que ocupan espacio sin moverse:
-- **[Nombre]**: X unidades | Cobertura: Y semanas
-- Sugerencia: Oferta / Reasignación / Esperar
-
-*Si no hay: "✅ No hay sobrestock significativo."*
-
-## 4. 💡 Recomendaciones Estratégicas (2-3 puntos)
-- Acción prioritaria #1
-- Mejora operativa sugerida
-- Oportunidad de optimización
-
+IMPORTANTE: Si hay eventos próximos (menos de 30 días), incluye una sección especial llamada "PREPARACIÓN PARA [NOMBRE DEL EVENTO]" con:
+- Productos que probablemente tendrán mayor demanda
+- Sugerencias de stock a reforzar basándote en los datos de inventario actual
+- Tiempo disponible para hacer pedidos considerando lead times
+` : ''}
 **REGLAS DE ORO:**
-✅ Usa negritas para productos y números clave
-✅ Sé directo: "Debes comprar" no "Podrías considerar"
-✅ NUNCA hables de dinero/costos (no tenemos esos datos)
-✅ Enfócate en UNIDADES, TIEMPO (días/semanas), ESPACIO (bodega)
-✅ Si un campo está vacío/null, no lo menciones
-✅ Máximo 800 palabras
-✅ Usa emojis para jerarquía visual (🚨📦✅)
 
+- NUNCA hables de dinero/costos (no tenemos esos datos)
+- Enfócate en UNIDADES, TIEMPO (días/semanas)
+- Si un campo está vacío/null, no lo menciones
+- Máximo 800 palabras
+- No uses emojis en el texto final
+- redondea los números a enteros 
+- No mensiones un sistema de alertas, nuestro sistema ya lo hace 
+- No mensiones que acabas de tener una reunion
+- No pongas cosas como para: jefe,  de {tu nombre} de: IA, etc.
 **TONO:** Profesional pero cercano, como si hablaras con el dueño en persona.`;
 
     console.log('📡 Enviando solicitud a Gemini...');
@@ -717,7 +764,7 @@ const generarBasePDF = (doc) => {
   
   doc.setFontSize(12);
   doc.setTextColor(0);
-  doc.text('📊 Indicadores Clave:', 14, 38);
+  doc.text(' Indicadores Clave:', 14, 38);
   
   doc.setFontSize(9);
   doc.setTextColor(60);
@@ -816,7 +863,7 @@ const descargarReporteConIA = async () => {
       
       doc.setFontSize(16);
       doc.setTextColor(147, 51, 234);
-      doc.text('🤖 Análisis Estratégico (IA)', 14, 20);
+      doc.text(' Análisis Estratégico (IA)', 14, 20);
       
       doc.setFontSize(9);
       doc.setTextColor(0);
@@ -825,7 +872,8 @@ const descargarReporteConIA = async () => {
         .replace(/\*\*/g, '')
         .replace(/\*/g, '')
         .replace(/#{1,3}\s/g, '')
-        .replace(/🚨|⚡|📦/g, '');
+        // Eliminar TODOS los emojis con una sola regex
+        .replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu, '');
       
       const lines = doc.splitTextToSize(cleanText, 180);
       let yPosition = 30;

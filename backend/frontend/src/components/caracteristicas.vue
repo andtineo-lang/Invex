@@ -36,41 +36,67 @@
 </template>
 
 <script setup>
-import Header from './Header.vue'
-import gsap from 'gsap'
-import { onMounted } from 'vue'
+import { onMounted } from 'vue';
+import Header from './Header.vue'; // Asegúrate de que el archivo Header.vue empiece con mayúscula en tu carpeta
+import gsap from 'gsap';
 
 onMounted(() => {
-  gsap.from('.feature-card', { opacity: 0, y: 30, stagger: 0.2, duration: 0.8 })
-})
+  // Animación suave de entrada
+  gsap.from('.feature-card', { 
+    opacity: 0, 
+    y: 30, 
+    stagger: 0.2, 
+    duration: 0.8,
+    ease: "power2.out"
+  });
+});
 </script>
 
 <style scoped>
 .page-section {
   padding: 6rem 1rem;
 }
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
 .section-header {
   text-align: center;
   margin-bottom: 3rem;
 }
+
+.section-header h2 {
+    color: #333; /* Ajusta según tu tema */
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+}
+
 .features-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
   gap: 2rem;
 }
+
 .feature-card {
   background: #fff;
   border-radius: 1.5rem;
   padding: 2rem;
   text-align: center;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05);
-  transition: transform 0.3s ease;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  border: 1px solid #eee;
 }
+
 .feature-card:hover {
   transform: translateY(-5px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
 }
+
 .feature-icon {
-  font-size: 2rem;
+  font-size: 3rem;
   margin-bottom: 1rem;
+  display: block;
 }
 </style>

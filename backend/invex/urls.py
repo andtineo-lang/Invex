@@ -1,19 +1,24 @@
-# invex/urls.py (ACTUALIZADO CON ENDPOINT CONSOLIDADO)
+# invex/urls.py (VERSIÓN FINAL CON RUTAS DE PAGO)
 
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from django.views.decorators.csrf import csrf_exempt
 from .views import (
+    # Vistas de Pago y Upgrade
+    UpgradePlanView,
+    IniciarPagoUpgradeView,  # <--- IMPORTANTE: Agregado aquí
+
     # Vistas de Autenticación y Perfil
     RegistroView,
     CustomLoginView,
     RegisterAndActivateView,
-    PasswordResetRequestView,
-    PasswordResetConfirmView, # <-- 1. AÑADIDO
     CurrentUserView,
     MarcarTutorialVistoView,
     CurrentEmpresaView,
     EmpresaConfiguracionView, 
+    ChangePasswordView,
+    PasswordResetRequestView,
+    PasswordResetConfirmView,
     
     # Vista de Importación
     InventarioImportAPIView,
@@ -25,7 +30,7 @@ from .views import (
     DiaImportanteViewSet,
     UserManagementViewSet,
     
-    # Vistas de Analíticas (Legacy - Mantener para compatibilidad)
+    # Vistas de Analíticas (Legacy)
     VentasHistoricasView,
     VentasMensualesView,
     TopProductosVendidosView,
@@ -35,7 +40,7 @@ from .views import (
     ProductoProyeccionesView,
     KpisGeneralesView,
     
-    # 🆕 Nueva Vista Consolidada (RECOMENDADA)
+    # Nueva Vista Consolidada
     DashboardConsolidadoView,
 )
 
@@ -56,11 +61,12 @@ urlpatterns = [
     path('auth/login/', csrf_exempt(CustomLoginView.as_view()), name='custom-login'),
     path('auth/register-and-activate/', csrf_exempt(RegisterAndActivateView.as_view()), name='register-and-activate'),
     
+    path('users/me/', CurrentUserView.as_view(), name='current-user'),
+
     # --- Rutas de Reseteo de Contraseña ---
     path('auth/request-password-reset/', csrf_exempt(PasswordResetRequestView.as_view()), name='password-reset-request'),
-    path('auth/reset-password-confirm/', csrf_exempt(PasswordResetConfirmView.as_view()), name='password-reset-confirm'), # <-- 2. AÑADIDO
-
-    path('users/me/', CurrentUserView.as_view(), name='current-user'),
+    path('auth/reset-password-confirm/', csrf_exempt(PasswordResetConfirmView.as_view()), name='password-reset-confirm'),
+    
     path('users/change-password/', ChangePasswordView.as_view(), name='change-password'),
     path('users/marcar-tutorial-visto/', MarcarTutorialVistoView.as_view(), name='marcar-tutorial-visto'),
 
@@ -68,7 +74,7 @@ urlpatterns = [
     # GESTIÓN DE EMPRESA
     # ========================================
     path('empresa/actual/', CurrentEmpresaView.as_view(), name='current-empresa'),
-    path('empresa/configuracion/', EmpresaConfiguracionView.as_view(), name='empresa-configuracion'),  #  NUEVA RUTA
+    path('empresa/configuracion/', EmpresaConfiguracionView.as_view(), name='empresa-configuracion'),
 
     # ========================================
     # IMPORTACIÓN MASIVA
@@ -76,18 +82,13 @@ urlpatterns = [
     path('empresas/<int:empresa_id>/importar-inventario/', csrf_exempt(InventarioImportAPIView.as_view()), name='importar-inventario'),
 
     # ========================================
-    # ENDPOINT CONSOLIDADO (RECOMENDADO)
+    # ENDPOINT CONSOLIDADO (DASHBOARD)
     # ========================================
-    # Este endpoint devuelve todos los datos del dashboard en UNA SOLA llamada
-    # Incluye: proyecciones, ventas mensuales, lead times, estado inventario y KPIs
-    # ✅ Úsalo en lugar de los endpoints individuales para mejor rendimiento
     path('analytics/dashboard-consolidado/', DashboardConsolidadoView.as_view(), name='dashboard-consolidado'),
 
     # ========================================
     # ANALÍTICAS INDIVIDUALES (LEGACY)
     # ========================================
-    # Estos endpoints se mantienen para compatibilidad con código existente
-    # pero se recomienda usar el endpoint consolidado arriba
     path('analytics/ventas-historicas/', VentasHistoricasView.as_view(), name='ventas-historicas'),
     path('analytics/ventas-mensuales/', VentasMensualesView.as_view(), name='ventas-mensuales'),
     path('analytics/top-productos/', TopProductosVendidosView.as_view(), name='top-productos'),
@@ -102,10 +103,16 @@ urlpatterns = [
     path('productos/proyecciones/', ProductoProyeccionesView.as_view(), name='producto-proyecciones'),
 
     # ========================================
+    # PAGOS Y UPGRADE (TRANSBANK)
+    # ========================================
+    # 1. Inicia el pago (Devuelve URL y Token de TB)
+    path('pagos/iniciar-upgrade/', IniciarPagoUpgradeView.as_view(), name='iniciar-upgrade'),
+    
+    # 2. Confirma el pago y actualiza la BD (Se llama al volver de TB)
+    path('users/upgrade-plan/', UpgradePlanView.as_view(), name='upgrade-plan'),
+
+    # ========================================
     # CRUD (Router)
     # ========================================
     path('', include(router.urls)),
 ]
-
-
-

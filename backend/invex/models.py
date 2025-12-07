@@ -45,9 +45,7 @@ class Usuario(AbstractBaseUser, PermissionsMixin):
     def __str__(self):
         return self.email
 
-# ---------------------------
-# EMPRESA
-# ---------------------------
+
 # ---------------------------
 # EMPRESA
 # ---------------------------
@@ -74,6 +72,11 @@ class Empresa(models.Model):
     dias_analisis_demanda = models.PositiveIntegerField(
         default=90,
         help_text="Días históricos para calcular demanda promedio"
+    )
+    subscription_status = models.CharField(
+        max_length=20, 
+        default='free', 
+        choices=[('free', 'Free'), ('pro', 'Pro')]
     )
 
     # --- NUEVOS CAMPOS PARA LOGÍSTICA AVANZADA Y VENCIMIENTOS ---
@@ -177,9 +180,18 @@ class Categoria(models.Model):
 class Producto(models.Model):
     empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name='productos')
     nombre = models.CharField(max_length=255)
-    sku = models.CharField(max_length=100, blank=True, null=True, unique=True)
+    sku = models.CharField(max_length=100, blank=True, null=True)  # ← Quitar unique=True
     unidad_medida = models.CharField(max_length=50, default='unidades')
     categoria = models.ForeignKey(Categoria, on_delete=models.SET_NULL, null=True, blank=True, related_name='productos')
+    
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['empresa', 'sku'],
+                name='unique_sku_per_empresa',
+                condition=models.Q(sku__isnull=False)  # Solo aplica si SKU no es null
+            )
+        ]
     
     def __str__(self):
         return f"{self.nombre} ({self.empresa.nombre})"
@@ -271,3 +283,25 @@ class DiaImportante(models.Model):
 
     def __str__(self):
         return f"{self.nombre_evento} ({self.empresa.nombre})"
+    
+    # ---------------------------
+# HISTORIAL DE CAMBIOS (AUDITORÍA)
+# ---------------------------
+class HistorialInventario(models.Model):
+    ACCIONES = (
+        ('CREACION', 'Creación'),
+        ('EDICION', 'Edición'),
+        ('ELIMINACION', 'Eliminación'),
+    )
+
+    # Vinculamos el historial a la empresa para seguridad
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name='historiales')
+    
+    accion = models.CharField(max_length=20, choices=ACCIONES)
+    producto_nombre = models.CharField(max_length=255) 
+    detalle = models.TextField(blank=True, null=True) 
+    fecha = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.empresa.nombre} - {self.producto_nombre} ({self.accion})"
+    

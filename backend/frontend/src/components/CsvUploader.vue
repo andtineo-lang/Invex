@@ -15,7 +15,7 @@
           @drop.prevent="handleDrop" 
           @dragenter.prevent 
           @dragleave.prevent
-        >
+        > 
           <input 
             type="file" 
             @change="handleFileChange" 
@@ -173,29 +173,29 @@
         </div>
       </div>
 
+      <!-- PREVISUALIZACIÓN MODIFICADA: Solo muestra nombres de columnas -->
       <div v-else-if="step === 'preview'" key="preview" class="step-container">
         <h5 class="step-title">Previsualiza y Confirma</h5>
         <p class="step-description">
-          Se procesarán {{ processedData.length }} filas de la hoja maestra. 
-          Revisa que los datos se hayan interpretado correctamente. 
-          Solo se muestran las primeras 5 filas.
+          Se procesarán <strong>{{ processedData.length }}</strong> productos de la hoja maestra.
         </p>
         
-        <div class="table-responsive">
-          <table class="preview-table">
-            <thead>
-              <tr>
-                <th v-for="header in previewHeaders" :key="header">{{ header }}</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="(row, index) in processedData.slice(0, 5)" :key="index">
-                <td v-for="header in previewHeaders" :key="header">
-                  {{ row[header] !== null && row[header] !== undefined ? row[header] : '-' }}
-                </td>
-              </tr>
-            </tbody>
-          </table>
+        <div class="columns-preview">
+          <p class="font-bold mb-2">Columnas mapeadas:</p>
+          <div class="columns-list">
+            <span v-for="header in previewHeaders" :key="header" class="column-tag">
+              {{ header }}
+            </span>
+          </div>
+        </div>
+
+        <div class="summary-info mt-4">
+          <p v-if="salesHistoryData.length > 0">
+            📊 Historial de ventas: <strong>{{ salesHistoryData.length }}</strong> registros
+          </p>
+          <p v-if="purchaseHistoryData.length > 0">
+            📦 Historial de compras: <strong>{{ purchaseHistoryData.length }}</strong> registros
+          </p>
         </div>
         
         <div class="action-buttons mt-6">
@@ -212,7 +212,10 @@
 
     </Transition>
     
-    <div v-if="error" class="error-message">{{ error }}</div>
+    <div v-if="error" class="error-message">
+      <p class="font-bold">Error:</p>
+      <p>{{ error }}</p>
+    </div>
   </div>
 </template>
 
@@ -250,7 +253,7 @@ const columnMap = ref({
   proveedor: '',
   fecha_pedido: '',
   fecha_recepcion: '',
-  fecha_vencimiento: '' // AGREGADO: Campo para mapear fecha de vencimiento
+  fecha_vencimiento: ''
 });
 
 const aliasMap = {
@@ -263,7 +266,6 @@ const aliasMap = {
   proveedor: ['proveedor', 'suplidor', 'supplier', 'vendor', 'vendedor'],
   fecha_pedido: ['fecha_pedido', 'f_pedido', 'fecha_orden', 'order_date', 'fecha_compra'],
   fecha_recepcion: ['fecha_recepcion', 'f_recepcion', 'recibo', 'delivery_date', 'fecha recibida', 'fecha_recepcion'],
-  // AGREGADO: Alias para fecha de vencimiento
   fecha_vencimiento: ['fecha_vencimiento', 'vencimiento', 'caducidad', 'f_venc', 'expiracion', 'vence']
 };
 
@@ -387,7 +389,7 @@ const findMasterSheetInfo = (workbook) => {
 // --- Función de Parseo de Fecha ---
 
 const parseDate = (value) => {
-  if (!value || value === 'No aplica') return null; // AGREGADO: Manejar "No aplica"
+  if (!value || value === 'No aplica') return null;
   
   if (typeof value === 'number') {
     const date = XLSX.SSF.parse_date_code(value);
@@ -406,7 +408,7 @@ const parseDate = (value) => {
     if (!isNaN(d.getTime())) return d.toISOString().split('T')[0];
   }
   
-  return value;
+  return null;
 };
 
 // --- Funciones de Mapeo ---
@@ -431,7 +433,6 @@ const guessColumnMappings = (headers) => {
     newMap.cantidad_comprada = 'cantidad_comprada';
   }
   
-  // AGREGADO: Detección de columna de vencimiento
   if (!newMap.fecha_vencimiento && headers.includes('fecha_vencimiento')) {
     newMap.fecha_vencimiento = 'fecha_vencimiento';
   }
@@ -549,7 +550,6 @@ const processExcelFile = (file) => {
               ...row,
               fecha_pedido: parseDate(row.fecha_pedido),
               fecha_recepcion: parseDate(row.fecha_recepcion),
-              // AGREGADO: Capturar fecha de vencimiento en historial de compras si existe
               fecha_vencimiento: parseDate(row.fecha_vencimiento || row.vencimiento || row.caducidad) 
             }));
             purchaseHistoryData.value.push(...parsedPurchases);
@@ -628,7 +628,7 @@ function goToPreview() {
   step.value = 'preview';
 }
 
-// --- Función de Envío ---
+// --- Función de Envío MEJORADA con mejor manejo de errores ---
 
 async function submitFile() {
   loading.value = true;
@@ -647,6 +647,9 @@ async function submitFile() {
     historial_ventas: salesHistoryData.value,
     historial_compras: purchaseHistoryData.value
   };
+
+  // DEBUG: Log del payload para ver qué se está enviando
+  console.log('Payload a enviar:', JSON.stringify(payload, null, 2));
   
   try {
     const response = await axios.post(
@@ -659,11 +662,37 @@ async function submitFile() {
     step.value = 'success';
     
   } catch (err) {
-    const details = err.response?.data?.detalles || 
-      (Array.isArray(err.response?.data?.error) ? 
-        err.response.data.error.join(', ') : 
-        err.response?.data?.error);
-    error.value = details || 'Ocurrió un error inesperado al importar.';
+    // Mejor manejo de errores
+    console.error('Error completo:', err);
+    console.error('Response data:', err.response?.data);
+    
+    let errorMessage = '';
+    
+    if (err.response) {
+      const data = err.response.data;
+      
+      // Intentar extraer mensaje de error del backend
+      if (data.detalles) {
+        errorMessage = data.detalles;
+      } else if (data.error) {
+        errorMessage = Array.isArray(data.error) ? data.error.join(', ') : data.error;
+      } else if (data.detail) {
+        errorMessage = data.detail;
+      } else if (data.message) {
+        errorMessage = data.message;
+      } else if (typeof data === 'string') {
+        errorMessage = data;
+      } else {
+        // Si hay datos pero no en formato esperado, mostrar JSON
+        errorMessage = `Error del servidor (${err.response.status}): ${JSON.stringify(data)}`;
+      }
+    } else if (err.request) {
+      errorMessage = 'No se recibió respuesta del servidor. Verifica tu conexión.';
+    } else {
+      errorMessage = err.message || 'Error desconocido al preparar la solicitud.';
+    }
+    
+    error.value = errorMessage;
   } finally {
     loading.value = false;
   }
@@ -695,7 +724,7 @@ function resetFlow(clearFile = true) {
     proveedor: '',
     fecha_pedido: '',
     fecha_recepcion: '',
-    fecha_vencimiento: '' // RESETEADO
+    fecha_vencimiento: ''
   };
 }
 </script>
@@ -711,7 +740,7 @@ function resetFlow(clearFile = true) {
 .loading-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(255, 255, 255, 0.8); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 50; }
 .spinner { border: 4px solid rgba(13, 148, 136, 0.2); border-left-color: #0d9488; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin-bottom: 1rem; }
 @keyframes spin { to { transform: rotate(360deg); } }
-.error-message { color: #ef4444; background-color: rgba(239, 68, 68, 0.1); padding: 1rem; border-radius: 8px; margin-top: 1.5rem; text-align: center; }
+.error-message { color: #ef4444; background-color: rgba(239, 68, 68, 0.1); padding: 1rem; border-radius: 8px; margin-top: 1.5rem; }
 .step-title { font-size: 1.25rem; font-weight: 600; color: #1a202c; margin-bottom: 0.5rem; }
 .step-description { color: #4a5568; margin-bottom: 2rem; }
 .mapping-fields { display: grid; gap: 1.5rem; margin-bottom: 2rem; }
@@ -725,13 +754,16 @@ function resetFlow(clearFile = true) {
 .btn-primary:disabled { background-color: #94a3b8; cursor: not-allowed; }
 .btn-secondary { background-color: #e2e8f0; color: #2d3748; }
 .btn-secondary:hover { background-color: #cbd5e0; }
-.table-responsive { overflow-x: auto; max-height: 300px; border: 1px solid #e2e8f0; border-radius: 8px; }
-.preview-table { width: 100%; border-collapse: collapse; }
-.preview-table th, .preview-table td { border-bottom: 1px solid #e2e8f0; padding: 12px 15px; text-align: left; white-space: nowrap;}
-.preview-table th { background-color: #f8fafc; font-weight: 600; position: sticky; top: 0; }
 .mapping-fields.grid-cols-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .field-map.required label::after { content: ' *'; color: red; }
 .sheet-tag { display: inline-block; background-color: #e0fdfa; color: #0d9488; padding: 0.25rem 0.5rem; border-radius: 0.25rem; margin-right: 0.5rem; font-size: 0.875rem; margin-top: 5px; }
 .hidden { display: none; }
 .mapping-sheets { margin-bottom: 1rem; }
+
+/* Nuevos estilos para la previsualización de columnas */
+.columns-preview { background-color: #f0fdfa; padding: 1rem; border-radius: 8px; border: 1px solid #99f6e4; }
+.columns-list { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.5rem; }
+.column-tag { display: inline-block; background-color: #0d9488; color: white; padding: 0.5rem 1rem; border-radius: 20px; font-size: 0.875rem; font-weight: 500; }
+.summary-info { background-color: #fefce8; padding: 1rem; border-radius: 8px; border: 1px solid #fde047; }
+.summary-info p { margin: 0.25rem 0; color: #854d0e; }
 </style>

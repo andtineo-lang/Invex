@@ -94,7 +94,18 @@
               <option value="worker">Worker</option>
               <option value="viewer">Viewer</option>
             </select>
-          </div>
+            
+            <div v-if="formAdd.role" class="mt-2 p-3 bg-teal-50 border border-teal-100 rounded-md flex gap-2 items-start transition-all duration-300">
+                <span class="text-teal-600 mt-0.5 shrink-0">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </span>
+                <p class="text-sm text-teal-800 leading-tight">
+                  {{ roleDescriptions[formAdd.role] }}
+                </p>
+            </div>
+            </div>
           <p v-if="error" class="text-red-600 text-sm">{{ error }}</p>
           <div class="space-y-2 pt-2">
             <button type="submit" class="w-full h-11 rounded-lg bg-teal-500 text-white font-semibold hover:bg-teal-600">Enviar Invitación</button>
@@ -118,7 +129,18 @@
               <option value="worker">Worker</option>
               <option value="viewer">Viewer</option>
             </select>
-          </div>
+
+            <div v-if="formEdit.role" class="mt-2 p-3 bg-purple-50 border border-purple-100 rounded-md flex gap-2 items-start transition-all duration-300">
+                <span class="text-purple-600 mt-0.5 shrink-0">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </span>
+                <p class="text-sm text-purple-800 leading-tight">
+                  {{ roleDescriptions[formEdit.role] }}
+                </p>
+            </div>
+            </div>
           <p v-if="error" class="text-red-600 text-sm">{{ error }}</p>
           <div class="space-y-2 pt-2">
             <button type="submit" class="w-full h-11 rounded-lg bg-purple-600 text-white font-semibold hover:bg-purple-700">Actualizar Rol</button>
@@ -152,6 +174,14 @@ import { ref, reactive, onMounted, computed } from 'vue';
 // Importamos el servicio de API de forma directa y simplificada
 import userService from '@/services/usersApi.service.js';
 
+/* --- Definición de Descripciones de Roles (NUEVO) --- */
+const roleDescriptions = {
+  admin: 'Acceso total: Gestión de usuarios, configuraciones, eliminación de registros y control completo del sistema.',
+  manager: 'Gestión operativa: Puede editar inventario, ver reportes y gestionar datos, pero no puede crear ni eliminar usuarios.',
+  worker: 'Operario: Acceso básico para registrar movimientos diarios, entradas/salidas y reportar incidencias.',
+  viewer: 'Solo lectura: Puede visualizar datos, inventarios y estadísticas sin permisos de edición ni cambios.'
+};
+
 /* --- Estado del Componente --- */
 const users = ref([]);
 const currentUser = ref(null);
@@ -179,10 +209,9 @@ onMounted(() => {
 async function fetchUsers() {
   try {
     const response = await userService.list();
-    // 👇 CAMBIO: Leemos la estructura plana que ahora nos da la API
     users.value = response.data.map(u => ({
       id: u.id,
-      userId: u.id, // El ID que devuelve la API es el del usuario
+      userId: u.id,
       name: u.name,
       email: u.email,
       role: u.rol,
@@ -228,11 +257,10 @@ async function submitNew() {
       email: formAdd.email,
       rol: formAdd.role
     };
-    // Esta llamada es EXITOSA
+    
     const response = await userService.create(payload);
     const createdUser = response.data;
 
-    // Esta es la parte que corregimos para que lea bien la respuesta
     users.value.unshift({
         id: createdUser.id,
         userId: createdUser.id,
@@ -242,12 +270,11 @@ async function submitNew() {
         color: randomColor()
     });
     
-    showAdd.value = false; // El modal se cierra correctamente
+    showAdd.value = false;
   } catch (e) {
-    // Este bloque se está ejecutando por error, pero ya no lo hará con el cambio
     const errorMsg = e.response?.data?.detail || 'Error al guardar el usuario.';
     error.value = errorMsg;
-    console.error("Error residual:", e);
+    console.error("Error:", e);
   }
 }
 
