@@ -773,7 +773,7 @@ def calcular_proyecciones_inventario(empresa, dias_analisis=None):
             demanda_semanal = (total_vendido / config_dias_analisis) * 7
         else:
             demanda_semanal = 0
-        demanda_semanal = round(demanda_semanal, 2)
+        demanda_semanal = round(demanda_semanal, 0)
         
         lead_time_dias = lead_time_map.get(stock.producto.id, LEAD_TIME_DEFECTO)
         lead_time_semanas = round(lead_time_dias / 7, 1)
