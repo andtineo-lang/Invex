@@ -986,7 +986,7 @@ class IniciarPagoUpgradeView(APIView):
         try:
             buy_order = f"upg_{get_random_string(12)}"
             session_id = str(request.user.id)
-            amount = 15000
+            amount = 30000
             return_url = 'http://localhost:8080/pago/confirmacion-upgrade'
 
             print(f"🟢 [DEBUG] Configurando orden: {buy_order}")

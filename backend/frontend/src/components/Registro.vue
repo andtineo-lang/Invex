@@ -207,7 +207,7 @@ const plans = [
   { 
     id: 'pro',
     name: 'Plan INVEX Pro', 
-    price: 15000, 
+    price: 30000, 
     popular: true,
     features: [
         'Productos Ilimitados',
